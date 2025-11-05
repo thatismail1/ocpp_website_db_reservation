@@ -4,7 +4,7 @@
     "brand": "SCHNEIDER",
     "model": "Unknown",
     "status": "Available",
-    "last_heartbeat": "2025-11-05T14:26:37.274486+00:00",
+    "last_heartbeat": "2025-11-05T14:30:37.605573+00:00",
     "total_energy_delivered": 309.248,
     "uptime_hours": 145.94,
     "connector_id": 1,
@@ -16,7 +16,7 @@
     "brand": "Unknown",
     "model": "Unknown",
     "status": "Available",
-    "last_heartbeat": "2025-11-05T14:26:16.226204+00:00",
+    "last_heartbeat": "2025-11-05T14:31:17.964954+00:00",
     "total_energy_delivered": 0.0,
     "uptime_hours": 0,
     "connector_id": 1,
@@ -27,11 +27,11 @@
     "brand": "LIVOLTEK",
     "model": "LIVOLTEK",
     "status": "Charging",
-    "last_heartbeat": "2025-11-05T14:27:01.143130+00:00",
-    "total_energy_delivered": 54.0,
-    "uptime_hours": 149.36,
+    "last_heartbeat": "2025-11-05T14:31:16.431220+00:00",
+    "total_energy_delivered": 55.0,
+    "uptime_hours": 149.42,
     "connector_id": 1,
-    "last_meter_reading": 6.0,
+    "last_meter_reading": 7.0,
     "boot_time": "2025-10-30T09:05:41.180439+00:00"
   }
 }
