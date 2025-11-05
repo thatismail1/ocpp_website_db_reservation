@@ -28,7 +28,7 @@
     "model": "LIVOLTEK",
     "status": "Charging",
     "last_heartbeat": "2025-11-05T14:31:16.431220+00:00",
-    "total_energy_delivered": 55.0,
+    "total_energy_delivered": 48.0,
     "uptime_hours": 149.42,
     "connector_id": 1,
     "last_meter_reading": 7.0,
