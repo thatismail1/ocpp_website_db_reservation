@@ -306,11 +306,11 @@ frontend:
   
   - task: "Role-Based Routing"
     implemented: true
-    working: false
+    working: "NA"
     file: "/app/frontend/src/App.js"
     stuck_count: 1
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -318,6 +318,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE FOUND: Role-based routing has session management problems. When user tries to access admin routes (/users, /), they are redirected to /login instead of /user-dashboard, indicating session is being lost during navigation. This breaks the expected role-based access control behavior. The ProtectedRoute component needs to handle session persistence better when redirecting users."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Modified api.js response interceptor to NOT redirect to /login on 401 errors for /auth/login and /auth/verify endpoints. This allows login errors to be properly displayed and prevents session loss during auth verification. Now only protected endpoints trigger automatic redirect on 401."
 
 metadata:
   created_by: "main_agent"
