@@ -19,9 +19,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Only redirect on 401 for protected endpoints
+    // Don't redirect for login or verify endpoints (let components handle these)
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const requestUrl = error.config?.url || '';
+      
+      // Don't redirect if it's a login or verify request
+      if (!requestUrl.includes('/auth/login') && !requestUrl.includes('/auth/verify')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
