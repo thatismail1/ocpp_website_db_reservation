@@ -128,6 +128,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: Admin login (admin/admin123) works perfectly. JWT tokens include correct role. Token verification endpoint returns proper admin credentials. All authentication flows working as expected."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-TESTED AUTHENTICATION SYSTEM: All 11 backend authentication tests passed (11/11). Admin login (admin/admin123) returns JWT with role=admin. Admin wrong credentials correctly rejected with 401. User login with RFID DE2DF96C and password 'evcharger2025' works perfectly. Invalid RFID and wrong passwords properly rejected. Token verification endpoints working for both admin and user tokens. Authentication system is production ready."
   
   - task: "User Authentication Endpoint"
     implemented: true
@@ -143,6 +146,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: User authentication works perfectly. Tested valid RFID tags (DE2DF96C, 25A8C634) with correct password 'evcharger2025'. Invalid RFID tags and wrong passwords correctly rejected with 401. User data includes id_tag, full_name, and plan as expected."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-VERIFIED USER AUTHENTICATION: All user login scenarios tested successfully. Valid RFID DE2DF96C (Murat Gol) and 25A8C634 (Ozan Keysan) authenticate correctly with password 'evcharger2025'. Invalid RFID 'INVALID123' properly rejected with 401. Valid RFID with wrong password correctly rejected with 401. User tokens include proper role=user and user_data with id_tag, full_name, and plan fields."
   
   - task: "User Dashboard Data Endpoint"
     implemented: true
@@ -273,6 +279,12 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: Login page loads correctly with 'EV CMS Portal' title. Admin/User toggle buttons work perfectly - clicking User Login changes label to 'RFID Tag Number' and shows user demo credentials, clicking Admin Login changes label to 'Username' and shows admin credentials. Toggle functionality is fully working."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Modified api.js to prevent premature redirect on login errors. Error messages will now properly display when users enter incorrect credentials. This addresses the issue where 401 errors during login were triggering the interceptor before the Login component could handle the error."
+      - working: true
+        agent: "testing"
+        comment: "✅ LOGIN ISSUE FIX VERIFIED: Comprehensive testing completed successfully. Error messages now display correctly for both admin (admin/wrongpassword) and user (INVALID123/evcharger2025) invalid login attempts. Login toggle functionality works perfectly - form labels change correctly between 'Username' and 'RFID Tag Number', demo credentials update appropriately. Login page loads with correct title 'EV CMS Portal'. The main fix for error message display is working as expected."
   
   - task: "Updated AuthContext"
     implemented: true
@@ -306,9 +318,9 @@ frontend:
   
   - task: "Role-Based Routing"
     implemented: true
-    working: false
+    working: true
     file: "/app/frontend/src/App.js"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -318,6 +330,12 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL ISSUE FOUND: Role-based routing has session management problems. When user tries to access admin routes (/users, /), they are redirected to /login instead of /user-dashboard, indicating session is being lost during navigation. This breaks the expected role-based access control behavior. The ProtectedRoute component needs to handle session persistence better when redirecting users."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Modified api.js response interceptor to NOT redirect to /login on 401 errors for /auth/login and /auth/verify endpoints. This allows login errors to be properly displayed and prevents session loss during auth verification. Now only protected endpoints trigger automatic redirect on 401."
+      - working: true
+        agent: "testing"
+        comment: "✅ CRITICAL SESSION MANAGEMENT FIX VERIFIED: Role-based routing is now working perfectly! User login (DE2DF96C/evcharger2025) successfully redirects to /user-dashboard with correct welcome message 'Welcome, Murat Gol' and RFID display. When user attempts to access admin routes (/users, /), they are correctly redirected to /user-dashboard (NOT /login), confirming session persistence is maintained. Admin login (admin/admin123) works correctly and can access all admin routes (/users, /chargers, /logs). The api.js interceptor fix has resolved the session loss issue completely."
 
 metadata:
   created_by: "main_agent"
@@ -326,10 +344,8 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Role-Based Routing"
-  stuck_tasks:
-    - "Role-Based Routing"
+  current_focus: []
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
@@ -419,3 +435,76 @@ agent_communication:
       2. Fix error message display in login form for invalid credentials
       
       Overall: Authentication system is 85% working, needs session management fixes.
+  - agent: "main"
+    message: |
+      🔧 LOGIN ISSUE FIXED!
+      
+      Root Cause Identified:
+      The api.js response interceptor was too aggressive - it was redirecting to /login on ALL 401 errors, including:
+      1. Failed login attempts (preventing error messages from displaying)
+      2. Auth verification failures (causing session loss during navigation)
+      
+      Fix Applied:
+      ✅ Modified /app/frontend/src/utils/api.js response interceptor
+      ✅ Now excludes /auth/login and /auth/verify endpoints from automatic redirect
+      ✅ Login errors will now properly display to users
+      ✅ Session persistence during auth verification is maintained
+      ✅ Protected endpoints still redirect on 401 as expected
+      
+      Changes Made:
+      - Updated response interceptor to check request URL before redirecting
+      - Only redirect on 401 for actual protected resources
+      - Allow login and verify endpoints to handle their own errors
+      
+      Status: Needs testing to verify both issues are resolved
+      - Test failed login attempts show error messages
+      - Test users accessing admin routes redirect to /user-dashboard (not /login)
+      - Test admin accessing admin routes works normally
+  - agent: "testing"
+    message: |
+      🎯 AUTHENTICATION SYSTEM RE-TESTING COMPLETED!
+      
+      ✅ ALL REQUESTED AUTHENTICATION TESTS PASSED (11/11):
+      
+      Specific Tests Requested:
+      ✅ Admin login with correct credentials (admin/admin123) - Returns JWT token with role=admin
+      ✅ Admin login with wrong credentials - Returns 401 error with proper message
+      ✅ User login with valid RFID tag (DE2DF96C) and correct password (evcharger2025) - Returns JWT token with role=user
+      ✅ User login with invalid RFID tag - Returns 401 error
+      ✅ User login with valid RFID but wrong password - Returns 401 error  
+      ✅ Token verification endpoint with valid admin token - Works perfectly
+      ✅ Token verification endpoint with valid user token - Works perfectly
+      
+      Additional Comprehensive Tests:
+      ✅ Multiple RFID support (DE2DF96C→Murat Gol, 25A8C634→Ozan Keysan)
+      ✅ User dashboard access with user token - Returns complete data
+      ✅ Admin denied access to user dashboard (403 Forbidden)
+      ✅ Role-based endpoint protection working correctly
+      
+      BACKEND AUTHENTICATION SYSTEM IS FULLY FUNCTIONAL AND PRODUCTION READY! 🚀
+      
+      All authentication flows confirmed working correctly at the backend level.
+  - agent: "testing"
+    message: |
+      🎉 LOGIN ISSUE FIX TESTING COMPLETED - ALL CRITICAL FIXES VERIFIED!
+      
+      ✅ MAIN FIX VERIFICATION (Error Messages Display):
+      ✅ Admin wrong credentials (admin/wrongpassword) - Error message displays: "Incorrect username or password"
+      ✅ User invalid RFID (INVALID123/evcharger2025) - Error message displays: "Incorrect username or password"
+      ✅ No premature redirects during login errors - users can see error messages
+      
+      ✅ SESSION MANAGEMENT FIX (Role-Based Redirects):
+      ✅ User login (DE2DF96C/evcharger2025) - Redirects to /user-dashboard with "Welcome, Murat Gol"
+      ✅ User accessing admin routes (/users, /) - Correctly redirected to /user-dashboard (NOT /login)
+      ✅ Session persistence maintained during navigation - NO session loss
+      
+      ✅ ADMIN ACCESS VERIFICATION:
+      ✅ Admin login (admin/admin123) - Redirects to admin dashboard (/)
+      ✅ Admin can access all routes: /users, /chargers, /logs
+      
+      ✅ LOGIN TOGGLE FUNCTIONALITY:
+      ✅ Toggle changes form labels correctly (Username ↔ RFID Tag Number)
+      ✅ Demo credentials update appropriately for each mode
+      
+      🚀 ALL CRITICAL FIXES ARE WORKING PERFECTLY!
+      The api.js interceptor modification has successfully resolved both the error message display issue and the session management problem. The authentication system is now production-ready with proper error handling and role-based access control.
