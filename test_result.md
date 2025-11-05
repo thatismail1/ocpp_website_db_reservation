@@ -425,3 +425,28 @@ agent_communication:
       2. Fix error message display in login form for invalid credentials
       
       Overall: Authentication system is 85% working, needs session management fixes.
+  - agent: "main"
+    message: |
+      🔧 LOGIN ISSUE FIXED!
+      
+      Root Cause Identified:
+      The api.js response interceptor was too aggressive - it was redirecting to /login on ALL 401 errors, including:
+      1. Failed login attempts (preventing error messages from displaying)
+      2. Auth verification failures (causing session loss during navigation)
+      
+      Fix Applied:
+      ✅ Modified /app/frontend/src/utils/api.js response interceptor
+      ✅ Now excludes /auth/login and /auth/verify endpoints from automatic redirect
+      ✅ Login errors will now properly display to users
+      ✅ Session persistence during auth verification is maintained
+      ✅ Protected endpoints still redirect on 401 as expected
+      
+      Changes Made:
+      - Updated response interceptor to check request URL before redirecting
+      - Only redirect on 401 for actual protected resources
+      - Allow login and verify endpoints to handle their own errors
+      
+      Status: Needs testing to verify both issues are resolved
+      - Test failed login attempts show error messages
+      - Test users accessing admin routes redirect to /user-dashboard (not /login)
+      - Test admin accessing admin routes works normally
