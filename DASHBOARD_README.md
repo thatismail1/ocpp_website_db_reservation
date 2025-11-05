@@ -144,7 +144,7 @@ Password: admin123
 ## 🚦 Running the Application
 
 The application is already running and accessible at:
-https://charge-portal.preview.emergentagent.com
+https://login-fix-96.preview.emergentagent.com
 
 ### Services Status
 ```bash
