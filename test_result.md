@@ -146,6 +146,9 @@ backend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: User authentication works perfectly. Tested valid RFID tags (DE2DF96C, 25A8C634) with correct password 'evcharger2025'. Invalid RFID tags and wrong passwords correctly rejected with 401. User data includes id_tag, full_name, and plan as expected."
+      - working: true
+        agent: "testing"
+        comment: "✅ RE-VERIFIED USER AUTHENTICATION: All user login scenarios tested successfully. Valid RFID DE2DF96C (Murat Gol) and 25A8C634 (Ozan Keysan) authenticate correctly with password 'evcharger2025'. Invalid RFID 'INVALID123' properly rejected with 401. Valid RFID with wrong password correctly rejected with 401. User tokens include proper role=user and user_data with id_tag, full_name, and plan fields."
   
   - task: "User Dashboard Data Endpoint"
     implemented: true
