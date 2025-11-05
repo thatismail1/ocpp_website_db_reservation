@@ -261,11 +261,11 @@ backend:
 frontend:
   - task: "Login Page with Toggle"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/frontend/src/pages/Login.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: "NA"
         agent: "main"
@@ -273,6 +273,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ COMPREHENSIVE TESTING COMPLETED: Login page loads correctly with 'EV CMS Portal' title. Admin/User toggle buttons work perfectly - clicking User Login changes label to 'RFID Tag Number' and shows user demo credentials, clicking Admin Login changes label to 'Username' and shows admin credentials. Toggle functionality is fully working."
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: Modified api.js to prevent premature redirect on login errors. Error messages will now properly display when users enter incorrect credentials. This addresses the issue where 401 errors during login were triggering the interceptor before the Login component could handle the error."
   
   - task: "Updated AuthContext"
     implemented: true
