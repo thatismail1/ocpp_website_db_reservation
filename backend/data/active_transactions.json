@@ -1,0 +1,18 @@
+{
+  "1762318631": {
+    "id_tag": "6A6CB588",
+    "start_meter": 0.0,
+    "start_time": "2025-11-05T04:57:11.297112+00:00",
+    "last_meter": 6.0,
+    "full_name": "MehmetAli Can",
+    "charger_id": "LIVOLTEK"
+  },
+  "1762350621": {
+    "id_tag": "63B08286",
+    "start_meter": 0.0,
+    "start_time": "2025-11-05T13:50:21.699200+00:00",
+    "last_meter": 6.0,
+    "full_name": "Senturk Yuksel",
+    "charger_id": "LIVOLTEK"
+  }
+}
