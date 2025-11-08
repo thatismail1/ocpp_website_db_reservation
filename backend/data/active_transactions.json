@@ -3,16 +3,16 @@
     "id_tag": "6A6CB588",
     "start_meter": 0.0,
     "start_time": "2025-11-05T04:57:11.297112+00:00",
-    "last_meter": 7.0,
+    "last_meter": 9.0,
     "full_name": "MehmetAli Can",
     "charger_id": "LIVOLTEK"
   },
-  "1762350621": {
-    "id_tag": "63B08286",
+  "1762627602": {
+    "id_tag": "A7903D96",
     "start_meter": 0.0,
-    "start_time": "2025-11-05T13:50:21.699200+00:00",
-    "last_meter": 7.0,
-    "full_name": "Senturk Yuksel",
+    "start_time": "2025-11-08T18:46:42.929312+00:00",
+    "last_meter": 9.0,
+    "full_name": "Ahmet Aksoy",
     "charger_id": "LIVOLTEK"
   }
 }
