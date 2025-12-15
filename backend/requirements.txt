@@ -70,3 +70,4 @@ watchfiles==1.1.0
 websockets==12.0
 ocpp==0.22.0
 aiohttp==3.9.1
+sqlalchemy==2.0.23
