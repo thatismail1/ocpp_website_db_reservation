@@ -147,6 +147,8 @@ def meter_log_to_dict(row: MeterLog):
         "frequency": row.frequency,
         "deliveredEnergy": row.delivered_energy,
         "suppliedEnergy": row.supplied_energy,
+        "chargerName": row.charger_name,
+    }
 
 
 def reservation_to_dict(row: Reservation):
