@@ -81,6 +81,37 @@ class MeterLog(Base):
     )
 
 
+class Reservation(Base):
+    __tablename__ = "reservations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    reservation_id = Column(String(64), unique=True, index=True)
+    user_id_tag = Column(String(128), index=True)
+    user_full_name = Column(String(256))
+    charger_id = Column(String(128), index=True)
+    charger_name = Column(String(256))
+    start_time = Column(DateTime(timezone=True), index=True)
+    end_time = Column(DateTime(timezone=True), index=True)
+    status = Column(String(32), index=True)  # pending, active, completed, cancelled, no_show
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    cancelled_at = Column(DateTime(timezone=True), nullable=True)
+    cancelled_by = Column(String(128), nullable=True)
+    notes = Column(String(512), nullable=True)
+
+
+class BlockedTimeSlot(Base):
+    __tablename__ = "blocked_time_slots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    charger_id = Column(String(128), index=True)
+    start_time = Column(DateTime(timezone=True), index=True)
+    end_time = Column(DateTime(timezone=True), index=True)
+    reason = Column(String(512))
+    created_by = Column(String(128))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
 
