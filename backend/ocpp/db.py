@@ -147,5 +147,38 @@ def meter_log_to_dict(row: MeterLog):
         "frequency": row.frequency,
         "deliveredEnergy": row.delivered_energy,
         "suppliedEnergy": row.supplied_energy,
+
+
+def reservation_to_dict(row: Reservation):
+    """Convert Reservation model to dictionary"""
+    return {
+        "id": row.id,
+        "reservation_id": row.reservation_id,
+        "user_id_tag": row.user_id_tag,
+        "user_full_name": row.user_full_name,
+        "charger_id": row.charger_id,
+        "charger_name": row.charger_name,
+        "start_time": row.start_time.isoformat() if row.start_time else None,
+        "end_time": row.end_time.isoformat() if row.end_time else None,
+        "status": row.status,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "cancelled_at": row.cancelled_at.isoformat() if row.cancelled_at else None,
+        "cancelled_by": row.cancelled_by,
+        "notes": row.notes,
+    }
+
+
+def blocked_slot_to_dict(row: BlockedTimeSlot):
+    """Convert BlockedTimeSlot model to dictionary"""
+    return {
+        "id": row.id,
+        "charger_id": row.charger_id,
+        "start_time": row.start_time.isoformat() if row.start_time else None,
+        "end_time": row.end_time.isoformat() if row.end_time else None,
+        "reason": row.reason,
+        "created_by": row.created_by,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+    }
+
         "chargerName": row.charger_name,
     }
