@@ -181,6 +181,3 @@ def blocked_slot_to_dict(row: BlockedTimeSlot):
         "created_by": row.created_by,
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
-
-        "chargerName": row.charger_name,
-    }
