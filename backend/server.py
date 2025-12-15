@@ -1,4 +1,4 @@
-from backend.ocpp.db import SessionLocal, MeterLog, init_db, meter_log_to_dict
+from ocpp.db import SessionLocal, MeterLog, init_db, meter_log_to_dict
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
