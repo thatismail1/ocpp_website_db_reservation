@@ -1,18 +1,18 @@
 {
-  "1762318631": {
-    "id_tag": "6A6CB588",
-    "start_meter": 0.0,
-    "start_time": "2025-11-05T04:57:11.297112+00:00",
-    "last_meter": 9.0,
-    "full_name": "MehmetAli Can",
-    "charger_id": "LIVOLTEK"
+  "1765789898": {
+    "id_tag": "FA9B6588",
+    "start_meter": 2285.207,
+    "start_time": "2025-12-15T09:11:38.748271+00:00",
+    "last_meter": 2295.366,
+    "full_name": "Ali Yilmaz",
+    "charger_id": "SCHNEIDER/EVlinkProAC"
   },
-  "1762627602": {
-    "id_tag": "A7903D96",
+  "1765791343": {
+    "id_tag": "A3FAC686",
     "start_meter": 0.0,
-    "start_time": "2025-11-08T18:46:42.929312+00:00",
-    "last_meter": 9.0,
-    "full_name": "Ahmet Aksoy",
+    "start_time": "2025-12-15T09:35:43.039082+00:00",
+    "last_meter": 22.0,
+    "full_name": "Utkucan Dogan",
     "charger_id": "LIVOLTEK"
   }
 }

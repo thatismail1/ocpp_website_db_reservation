@@ -19,6 +19,10 @@ import csv
 import json
 import os
 from pathlib import Path
+from db import SessionLocal, MeterLog,init_db
+
+
+init_db()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -416,9 +420,17 @@ class ChargePoint(cp):
     async def on_meter_values(self, connector_id=None, meter_value=None, **kwargs):
         """Handle MeterValues from Charge Point with quota checking."""
         try:
+            self.charger_status_manager.update_charger_status(
+                self.id,
+                "Charging",
+                connector_id
+            )            
+            
+            
             # Log raw incoming data
             logging.info(f'[METER] Received meter values from {self.id}')
             logging.info(f'[METER] Connector ID: {connector_id}')
+
 
             # Extract energy value for quota checking
             current_energy_kwh = None
@@ -788,35 +800,65 @@ class ChargerStatusManager:
         logging.info(f"[STATUS] ✅ Status updated for {charger_id}: {status}")
 
     def append_meter_log(self, meter_data):
-        """Append meter reading to meter_data_log.json as a JSON array - never resets, only appends."""
+        """
+        Save meter data directly to DB instead of JSON file.
+        """
+        from datetime import datetime, timezone
+        
+
         try:
-            # Read existing data
-            existing_data = []
-            if self.meter_log_file.exists():
-                try:
-                    with open(self.meter_log_file, "r", encoding="utf-8") as f:
-                        content = f.read().strip()
-                        if content:
-                            existing_data = json.loads(content)
-                            if not isinstance(existing_data, list):
-                                existing_data = []
-                except json.JSONDecodeError:
-                    logging.warning(f"[METER_LOG] Could not parse existing data, starting fresh")
-                    existing_data = []
-                except Exception as e:
-                    logging.error(f"[METER_LOG] Error reading existing log: {e}")
-                    existing_data = []
-            
-            # Append new data
-            existing_data.append(meter_data)
-            
-            # Write back the entire array
-            with open(self.meter_log_file, "w", encoding="utf-8") as f:
-                json.dump(existing_data, f, indent=2, ensure_ascii=False)
-            
-            logging.info(f"[METER_LOG] ✅ Appended meter data to {self.meter_log_file} (Total records: {len(existing_data)})")
+            db = SessionLocal()
+
+            # fix timestamps
+            ts_raw = meter_data.get("timestamp")
+            if ts_raw:
+                ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+            else:
+                ts = datetime.now(timezone.utc)
+
+            row = MeterLog(
+                record_id=meter_data.get("ID"),
+                group_id=meter_data.get("groupId"),
+                group_name=meter_data.get("groupName"),
+                device_type=meter_data.get("deviceType"),
+                timestamp=ts,
+                user_name=meter_data.get("userName"),
+                charger_name=meter_data.get("chargerName"),
+
+                total_power=meter_data.get("totalPower", 0),
+                phase1_power=meter_data.get("phase1Power", 0),
+                phase2_power=meter_data.get("phase2Power", 0),
+                phase3_power=meter_data.get("phase3Power", 0),
+
+                total_reactive_power=meter_data.get("totalReactivePower", 0),
+                phase1_reactive_power=meter_data.get("phase1ReactivePower", 0),
+                phase2_reactive_power=meter_data.get("phase2ReactivePower", 0),
+                phase3_reactive_power=meter_data.get("phase3ReactivePower", 0),
+
+                total_power_factor=meter_data.get("totalPowerFactor", 0),
+                phase1_power_factor=meter_data.get("phase1PowerFactor", 0),
+                phase2_power_factor=meter_data.get("phase2PowerFactor", 0),
+                phase3_power_factor=meter_data.get("phase3PowerFactor", 0),
+
+                phase1_voltage=meter_data.get("phase1Voltage", 0),
+                phase2_voltage=meter_data.get("phase2Voltage", 0),
+                phase3_voltage=meter_data.get("phase3Voltage", 0),
+
+                frequency=meter_data.get("frequency", 0),
+                delivered_energy=meter_data.get("deliveredEnergy", 0),
+                supplied_energy=meter_data.get("suppliedEnergy", 0),
+            )
+
+            db.add(row)
+            db.commit()
+            logging.info(f"[DB] Saved meter log for charger {row.charger_name}")
+
         except Exception as e:
-            logging.error(f"[METER_LOG] ❌ Error appending meter data: {e}")
+            logging.error(f"[DB ERROR] {e}")
+
+        finally:
+            db.close()
+
 
 
     def update_uptime(self, charger_id):

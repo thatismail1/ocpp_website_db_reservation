@@ -148,22 +148,7 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Demo credentials */}
-          <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-            {loginType === 'admin' ? (
-              <>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-medium">Admin Credentials:</p>
-                <p className="text-xs text-slate-700 dark:text-slate-300">Username: <span className="font-mono font-semibold">admin</span></p>
-                <p className="text-xs text-slate-700 dark:text-slate-300">Password: <span className="font-mono font-semibold">admin123</span></p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-medium">User Login Info:</p>
-                <p className="text-xs text-slate-700 dark:text-slate-300">Username: <span className="font-mono font-semibold">Your RFID Tag</span></p>
-                <p className="text-xs text-slate-700 dark:text-slate-300">Password: <span className="font-mono font-semibold">evcharger2025</span></p>
-              </>
-            )}
-          </div>
+          
         </div>
       </Card>
     </div>

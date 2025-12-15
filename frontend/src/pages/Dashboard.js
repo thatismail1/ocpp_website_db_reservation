@@ -136,7 +136,7 @@ const Dashboard = () => {
                 <Tooltip />
                 <Line
                   type="monotone"
-                  dataKey="energy"
+                  dataKey="energy_kwh"
                   stroke="#10B981"
                   strokeWidth={3}
                   dot={{ fill: '#10B981' }}

@@ -213,45 +213,52 @@ const UserDashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {chargers && chargers.length > 0 ? (
-              chargers.map((charger) => (
-                <Card 
-                  key={charger.id} 
-                  className={`p-4 ${
-                    charger.status === 'Charging' 
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
-                      : charger.status === 'Available'
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                      : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white">{charger.name}</h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">{charger.brand}</p>
+              chargers.map((charger) => {
+                const displayStatus = charger.status === 'Charging' ? 'Occupied' : charger.status;
+
+                return (
+                  <Card
+                    key={charger.id}
+                    className={`p-4 ${
+                      displayStatus === 'Occupied'
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                        : displayStatus === 'Available'
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                        : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-slate-900 dark:text-white">{charger.name}</h3>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{charger.brand}</p>
+                      </div>
+
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          displayStatus === 'Occupied'
+                            ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
+                            : displayStatus === 'Available'
+                            ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+                            : 'bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200'
+                        }`}
+                      >
+                        {displayStatus || 'Unknown'}
+                      </span>
                     </div>
-                    <span 
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        charger.status === 'Charging' 
-                          ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200' 
-                          : charger.status === 'Available'
-                          ? 'bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-                          : 'bg-slate-200 text-slate-800 dark:bg-slate-600 dark:text-slate-200'
-                      }`}
-                    >
-                      {charger.status || 'Unknown'}
-                    </span>
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                    <p>Power: {charger.power || 'N/A'}</p>
-                    <p>Total Energy: {charger.total_energy_delivered?.toFixed(2) || '0.00'} kWh</p>
-                  </div>
-                </Card>
-              ))
+
+                    <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                      <p>Power: {charger.power || 'N/A'}</p>
+                      <p>Total Energy: {charger.total_energy_delivered?.toFixed(2) || '0.00'} kWh</p>
+                    </div>
+                  </Card>
+                );
+              })
             ) : (
               <p className="text-slate-500 dark:text-slate-400 col-span-full text-center py-8">
                 No chargers available
               </p>
             )}
+
           </div>
         </Card>
 

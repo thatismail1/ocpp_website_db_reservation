@@ -1,3 +1,4 @@
+from backend.ocpp.db import SessionLocal, MeterLog, init_db, meter_log_to_dict
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,14 +15,21 @@ from collections import defaultdict
 
 app = FastAPI(title="OCPP CMS Dashboard API")
 
+init_db()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 # CORS configuration
 cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,6 +64,44 @@ METER_DATA_LOG_JSON = DATA_DIR / "meter_data_log.json"
 CHARGER_STATUS_JSON = DATA_DIR / "charger_status.json"
 
 print(f"✅ Data directory: {DATA_DIR}")
+
+def compute_lifetime_total_energy_kwh(db):
+    rows = (
+        db.query(MeterLog.charger_name, MeterLog.timestamp, MeterLog.delivered_energy)
+        .filter(MeterLog.charger_name.isnot(None))
+        .order_by(MeterLog.charger_name.asc(), MeterLog.timestamp.asc())
+        .all()
+    )
+
+    by_charger = defaultdict(list)
+    for charger, ts, val in rows:
+        if ts is None:
+            continue
+        by_charger[charger.upper()].append((ts, float(val or 0)))
+
+    total_kwh = 0.0
+
+    for charger, samples in by_charger.items():
+        if len(samples) < 2:
+            continue
+
+        samples.sort(key=lambda x: x[0])
+        values = [v for _, v in samples]
+
+        # Schneider / EVLink → cumulative Wh register
+        if "SCHNEIDER" in charger or "EVLINK" in charger:
+            delta_wh = max(0.0, values[-1] - values[0])
+            total_kwh += delta_wh / 1000.0
+
+        # Livoltek → incremental kWh
+        else:
+            kwh = 0.0
+            for i in range(1, len(values)):
+                if values[i] > values[i - 1]:
+                    kwh += values[i] - values[i - 1]
+            total_kwh += kwh
+
+    return round(total_kwh, 3)
 
 # Models
 class LoginRequest(BaseModel):
@@ -199,56 +245,50 @@ def get_user_quota_info(id_tag: str):
     return None
 
 def update_total_energy_delivered():
-    """Recalculate lifetime total energy for each charger and update charger_status.json"""
+    """
+    Compute lifetime delivered energy using DB instead of JSON.
+    """
+    from sqlalchemy import select
+    from collections import defaultdict
+
+    chargers = load_json_file(CHARGER_STATUS_JSON, {})
+    totals = defaultdict(float)
+
+    db = SessionLocal()
+
     try:
-        logs = load_json_file(METER_DATA_LOG_JSON, [])
-        chargers = load_json_file(CHARGER_STATUS_JSON, {})
-        totals = defaultdict(float)
+        rows = db.query(MeterLog.charger_name, MeterLog.delivered_energy).all()
 
-        # Group by charger
-        readings_by_charger = defaultdict(list)
+        per_charger = defaultdict(list)
 
-        for rec in logs:
-            try:
-                charger_name = str(rec.get("chargerName", "UNKNOWN")).upper()
-                delivered = float(rec.get("deliveredEnergy", 0))
-                readings_by_charger[charger_name].append(delivered)
-            except Exception as e:
-                print(f"⚠️ Skipping invalid record: {e}")
-
-        for charger_name, readings in readings_by_charger.items():
-            if not readings:
+        for name, delivered in rows:
+            if not name:
                 continue
+            per_charger[name.upper()].append(float(delivered or 0))
 
-            # Sort values in ascending order (older to newer)
-            readings.sort()
+        for ch, vals in per_charger.items():
+            vals.sort()
 
-            if "SCHNEIDER" in charger_name or "EVLINK" in charger_name:
-                # Schneider sends cumulative Wh — take delta between first & last
-                first_val = readings[0]
-                last_val = readings[-1]
-                delta_wh = max(0.0, last_val - first_val)
-                total_kwh = delta_wh / 1000.0  # convert Wh → kWh
-            elif "LIVOLTEK" in charger_name:
-                # Livoltek sends incremental kWh readings
-                total_kwh = sum(max(0.0, readings[i] - readings[i - 1])
-                                for i in range(1, len(readings))
-                                if readings[i] > readings[i - 1])
-            else:
-                total_kwh = 0.0
+            if "SCHNEIDER" in ch or "EVLINK" in ch:
+                delta_wh = max(0, vals[-1] - vals[0])
+                totals[ch] = delta_wh / 1000.0
 
-            totals[charger_name] = round(total_kwh, 3)
+            elif "LIVOLTEK" in ch:
+                delta = 0
+                for i in range(1, len(vals)):
+                    if vals[i] > vals[i - 1]:
+                        delta += vals[i] - vals[i - 1]
+                totals[ch] = delta
 
-        # Write back updated totals into charger_status.json
-        for charger_id, charger_data in chargers.items():
-            name_upper = charger_id.upper()
-            charger_data["total_energy_delivered"] = totals.get(name_upper, 0.0)
+        for charger_id, ch_data in chargers.items():
+            cu = charger_id.upper()
+            ch_data["total_energy_delivered"] = totals.get(cu, 0)
 
         save_json_file(CHARGER_STATUS_JSON, chargers)
-        print("✅ Updated total_energy_delivered (corrected for Schneider cumulative Wh)")
 
-    except Exception as e:
-        print(f"⚠️ Failed to update total energy delivered: {e}")
+    finally:
+        db.close()
+
 
 
 
@@ -319,68 +359,101 @@ async def verify(token_data: dict = Depends(verify_token)):
     }
 
 @app.get("/api/user/dashboard")
-async def get_user_dashboard(token_data: dict = Depends(verify_token)):
-    """Get dashboard data for a specific user (RFID tag holder)"""
+async def get_user_dashboard(
+    token_data: dict = Depends(verify_token),
+    db = Depends(get_db),
+):
+    """
+    User dashboard with:
+    - User quota info
+    - Charger list
+    - Active session info
+    - Transaction history (from DB instead of JSON file)
+    """
+
     if token_data["role"] != "user":
         raise HTTPException(status_code=403, detail="User access required")
-    
+
     id_tag = token_data["username"]
-    
-    # Get user quota information
     user_info = get_user_quota_info(id_tag)
+
     if not user_info:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Get charger status
+
+    # ---------------------------------------------------------
+    # 1. Load chargers from charger_status.json (unchanged)
+    # ---------------------------------------------------------
     chargers = load_json_file(CHARGER_STATUS_JSON, {})
     chargers_list = []
-    for charger_id, charger_data in chargers.items():
-        charger_data["id"] = charger_id
-        brand = charger_data.get("brand", "Unknown")
-        name_upper = charger_data["name"].upper()
+
+    for charger_id, cdata in chargers.items():
+        cdata["id"] = charger_id
+        name_upper = cdata.get("name", "").upper()
+        brand = cdata.get("brand", "Unknown")
+
         if brand == "Unknown":
             if "LIVOLTEK" in name_upper:
                 brand = "LIVOLTEK"
             elif "SCHNEIDER" in name_upper or "EVLINK" in name_upper:
                 brand = "SCHNEIDER"
-        charger_data["brand"] = brand
-        chargers_list.append(charger_data)
-    
-    # Get active transactions for this user
+
+        cdata["brand"] = brand
+        chargers_list.append(cdata)
+
+    # ---------------------------------------------------------
+    # 2. Active Session (unchanged logic)
+    # ---------------------------------------------------------
     active_transactions = load_json_file(ACTIVE_TRANSACTIONS_JSON, {})
     user_active_session = None
+
     for trans_id, trans_data in active_transactions.items():
         if trans_data.get("id_tag") == id_tag:
             user_active_session = {
                 "transaction_id": trans_id,
                 "charger_id": trans_data.get("charger_id"),
                 "start_time": trans_data.get("start_time"),
-                "energy_delivered": trans_data.get("meter_start", 0)
+                "energy_delivered": trans_data.get("meter_start", 0),
             }
             break
-    
-    # Get transaction history for this user from meter logs
-    logs = load_json_file(METER_DATA_LOG_JSON, [])
+
+    # ---------------------------------------------------------
+    # 3. Transaction History (REPLACED — DB instead of JSON)
+    # ---------------------------------------------------------
     user_transactions = []
+
+    full_name = user_info.full_name  # match by full name
+    rows = (
+        db.query(MeterLog)
+        .filter(MeterLog.user_name == full_name)
+        .order_by(MeterLog.timestamp.desc())
+        .limit(200)  # get more rows and collapse to sessions
+        .all()
+    )
+
     seen_sessions = set()
-    
-    for log in logs:
-        if log.get("userName") == user_info.full_name or log.get("idTag") == id_tag:
-            # Create a unique session identifier
-            session_key = f"{log.get('chargerName')}_{log.get('timestamp', '')[:10]}"
-            if session_key not in seen_sessions:
-                seen_sessions.add(session_key)
-                user_transactions.append({
-                    "charger_name": log.get("chargerName"),
-                    "timestamp": log.get("timestamp"),
-                    "energy_delivered": log.get("deliveredEnergy", 0),
-                    "power": log.get("power", 0)
-                })
-    
-    # Sort by timestamp descending and limit to last 20
-    user_transactions.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+
+    for row in rows:
+        d = meter_log_to_dict(row)
+
+        # group multiple readings in one day → a "session"
+        session_key = f"{d.get('chargerName')}_{(d.get('timestamp') or '')[:10]}"
+
+        if session_key in seen_sessions:
+            continue
+        seen_sessions.add(session_key)
+
+        user_transactions.append({
+            "charger_name": d.get("chargerName"),
+            "timestamp": d.get("timestamp"),
+            "energy_delivered": d.get("deliveredEnergy", 0),
+            "power": d.get("totalPower", 0),
+        })
+
     user_transactions = user_transactions[:20]
-    
+
+    # ---------------------------------------------------------
+    # 4. Final response (unchanged structure)
+    # ---------------------------------------------------------
     return {
         "user_info": {
             "id_tag": user_info.id_tag,
@@ -389,81 +462,59 @@ async def get_user_dashboard(token_data: dict = Depends(verify_token)):
             "quota_kwh": user_info.quota_kwh,
             "used_kwh": user_info.used_kwh,
             "remaining_kwh": user_info.remaining_kwh,
-            "unlimited": user_info.unlimited
+            "unlimited": user_info.unlimited,
         },
         "chargers": chargers_list,
         "active_session": user_active_session,
-        "transaction_history": user_transactions
+        "transaction_history": user_transactions,
     }
 
-# --- Updated Endpoint ---
+
 @app.get("/api/stats", response_model=DashboardStats)
-async def get_dashboard_stats():
-    """
-    Unified dashboard statistics with auto-updating total_energy_delivered.
-    - Energy Today: computed from today's logs
-    - Total Energy Delivered: updated cumulatively across all chargers
-    """
-    from collections import defaultdict
-
-    # ✅ Step 1: Always refresh lifetime totals
-    update_total_energy_delivered()
-
-    # ✅ Step 2: Load data
-    energy_usage = load_json_file(ENERGY_USAGE_JSON, {})
-    active_transactions = load_json_file(ACTIVE_TRANSACTIONS_JSON, {})
+async def get_dashboard_stats(db = Depends(get_db)):
     chargers = load_json_file(CHARGER_STATUS_JSON, {})
+    active_transactions = load_json_file(ACTIVE_TRANSACTIONS_JSON, {})
     users = load_users_csv()
-    logs = load_json_file(METER_DATA_LOG_JSON, [])
 
     today = datetime.now(timezone.utc).date()
-    total_energy_today = 0.0
-    energy_by_charger = defaultdict(list)
 
-    # ✅ Step 3: Group today's readings per charger
-    for rec in logs:
-        try:
-            ts_str = rec.get("timestamp")
-            if not ts_str:
-                continue
-            ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-            if ts.date() != today:
-                continue
+    rows = db.query(MeterLog).filter(
+        MeterLog.timestamp >= datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc),
+        MeterLog.timestamp <= datetime.combine(today, datetime.max.time(), tzinfo=timezone.utc)
+    ).all()
 
-            delivered = float(rec.get("deliveredEnergy", 0))
-            charger_name = str(rec.get("chargerName", "UNKNOWN")).upper()
+    from collections import defaultdict
+    by_charger = defaultdict(list)
 
-            # Schneider → Wh → convert to kWh
-            if "SCHNEIDER" in charger_name or "EVLINK" in charger_name:
-                delivered /= 1000.0
+    for r in rows:
+        by_charger[r.charger_name].append((r.timestamp, r.delivered_energy))
 
-            energy_by_charger[charger_name].append((ts, delivered))
-        except Exception as e:
-            print(f"⚠️ Skipping invalid record: {e}")
+    total_today = 0.0
 
-    # ✅ Step 4: Compute daily delta for each charger
-    for charger, readings in energy_by_charger.items():
-        readings.sort(key=lambda x: x[0])
-        first, last = readings[0][1], readings[-1][1]
-        delta = max(0.0, last - first)
-        total_energy_today += delta
+    for ch, vals in by_charger.items():
+        if len(vals) < 2:
+            continue
+        vals.sort(key=lambda x: x[0])
+        first = vals[0][1]
+        last = vals[-1][1]
 
-    # ✅ Step 5: Aggregate dashboard stats
-    total_energy_delivered = sum(
-        c.get("total_energy_delivered", 0) for c in chargers.values()
-    )
-    active_chargers = sum(
-        1 for c in chargers.values() if c.get("status") == "Charging"
-    )
+        if "SCHNEIDER" in ch.upper() or "EVLINK" in ch.upper():
+            total_today += max(0.0, (last - first) / 1000.0)
+        else:
+            total_today += max(0.0, last - first)
 
-    # ✅ Step 6: Return response
+    # ✅ FIXED: lifetime total from DB
+    total_energy = compute_lifetime_total_energy_kwh(db)
+
+    active_chargers = sum(1 for c in chargers.values() if c.get("status") == "Charging")
+
     return DashboardStats(
-        total_energy_today=round(total_energy_today, 3),
+        total_energy_today=round(total_today, 3),
         active_sessions=len(active_transactions),
         total_users=len(users),
         total_chargers=len(chargers),
         active_chargers=active_chargers,
-        total_energy_delivered=round(total_energy_delivered, 3),
+        total_energy_delivered=total_energy,
     )
 
 
@@ -614,89 +665,105 @@ async def get_logs(
     username: str = Depends(verify_admin),
     charger: Optional[str] = None,
     limit: Optional[int] = None,
+    db = Depends(get_db)
 ):
-    logs = load_json_file(METER_DATA_LOG_JSON, [])
-    if charger:
-        logs = [log for log in logs if log.get('chargerName') == charger]
+    query = db.query(MeterLog).order_by(MeterLog.timestamp.desc())
 
-    if limit is not None and limit >= 0:
-        logs = logs[:limit] if limit > 0 else []
+    if charger:
+        query = query.filter(MeterLog.charger_name == charger)
+
+    if limit:
+        query = query.limit(limit)
+
+    rows = query.all()
+    logs = [meter_log_to_dict(r) for r in rows]
 
     return {"logs": logs}
+
 @app.get("/api/usage/history")
-async def get_usage_history(days: int = 7):
+async def get_usage_history(days: int = 7, db = Depends(get_db)):
     """
-    ✅ General daily total across all chargers (Schneider + Livoltek)
-    - Schneider/EVlink: cumulative Wh → delta of first–last, convert to kWh
-    - Livoltek: incremental kWh → sum of positive differences
-    - Ignores user separation; sums all chargers' totals
-    - Prevents overcounting on reconnects
+    Daily aggregated energy usage (kWh) for all chargers.
+    Correctly computes deltas using timestamp order.
     """
+
     from collections import defaultdict
+    from datetime import datetime, timedelta, timezone
 
-    if not METER_DATA_LOG_JSON.exists():
+    if days <= 0:
         return {"history": []}
 
-    try:
-        with open(METER_DATA_LOG_JSON, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-            if not content:
-                return {"history": []}
-            try:
-                records = json.loads(content)
-            except json.JSONDecodeError:
-                records = [json.loads(line) for line in content.splitlines() if line.strip()]
-    except Exception as e:
-        print(f"⚠️ Could not read meter_data_log.json: {e}")
-        return {"history": []}
+    today = datetime.now(timezone.utc).date()
+    start_date = today - timedelta(days=days - 1)
 
+    # ---------------------------------------------------------
+    # Load rows from DB in date range
+    # ---------------------------------------------------------
+    rows = (
+        db.query(MeterLog)
+        .filter(
+            MeterLog.timestamp >= datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc),
+            MeterLog.timestamp <= datetime.combine(today, datetime.max.time(), tzinfo=timezone.utc),
+        )
+        .order_by(MeterLog.timestamp.asc())
+        .all()
+    )
+
+    # ---------------------------------------------------------
+    # Group by (date, charger) → store (timestamp, value)
+    # ---------------------------------------------------------
     grouped = defaultdict(list)
 
-    for rec in records:
-        try:
-            ts_raw = rec.get("timestamp")
-            if not ts_raw:
-                continue
-            ts = datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
-            date_key = ts.date().isoformat()
+    for row in rows:
+        if not row.timestamp:
+            continue
 
-            charger = str(rec.get("chargerName", "UNKNOWN")).upper()
-            delivered = float(rec.get("deliveredEnergy", 0.0))
+        date_key = row.timestamp.date().isoformat()
+        charger = (row.charger_name or "UNKNOWN").upper()
+        energy = row.delivered_energy or 0
 
-            grouped[(date_key, charger)].append((ts, delivered))
-        except Exception as e:
-            print(f"⚠️ Skipping record: {e}")
+        grouped[(date_key, charger)].append((row.timestamp, energy))
 
-    # --- Calculate daily energy per charger ---
-    daily_totals = defaultdict(float)
-    for (date_key, charger), readings in grouped.items():
-        readings.sort(key=lambda x: x[0])
+    # ---------------------------------------------------------
+    # Compute daily totals
+    # ---------------------------------------------------------
+    per_day = defaultdict(float)
 
+    for (date_key, charger), samples in grouped.items():
+        if len(samples) < 2:
+            continue
+
+        # ✅ IMPORTANT: sort by timestamp, NOT by value
+        samples.sort(key=lambda x: x[0])
+        values = [v for _, v in samples]
+
+        # Schneider / EVLink → cumulative Wh register
         if "SCHNEIDER" in charger or "EVLINK" in charger:
-            first, last = readings[0][1], readings[-1][1]
-            delta_kwh = max(0.0, (last - first) / 1000.0)
+            delta_wh = max(0, values[-1] - values[0])
+            per_day[date_key] += delta_wh / 1000.0  # Wh → kWh
+
+        # Livoltek → incremental kWh values
         elif "LIVOLTEK" in charger:
-            delta_kwh = 0.0
-            for i in range(1, len(readings)):
-                if readings[i][1] > readings[i - 1][1]:
-                    delta_kwh += readings[i][1] - readings[i - 1][1]
-        else:
-            delta_kwh = 0.0
+            kwh = 0.0
+            for i in range(1, len(values)):
+                if values[i] > values[i - 1]:
+                    kwh += values[i] - values[i - 1]
+            per_day[date_key] += kwh
 
-        daily_totals[date_key] += delta_kwh
-
-    # --- Build last N days history ---
-    today = datetime.now(timezone.utc).date()
+    # ---------------------------------------------------------
+    # Build response (frontend expects this format)
+    # ---------------------------------------------------------
     history = []
     for i in range(days):
-        d = (today - timedelta(days=days - i - 1)).isoformat()
+        d = (start_date + timedelta(days=i)).isoformat()
         history.append({
             "date": d,
-            "energy": round(daily_totals.get(d, 0.0), 3)
+            "energy_kwh": round(per_day.get(d, 0.0), 3)
         })
 
-    print("✅ Corrected general daily energy history:", history)
     return {"history": history}
+
+
 
 
 
