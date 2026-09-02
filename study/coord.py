@@ -374,3 +374,63 @@ def coordinate_ac(d, t0=0, soc0=None, bess0=0.5, band=None, n_corr=2,
     a["u_corr"] = u_corr
     a["u"] = a["u"] + u_corr          # certify the envelope on corrected model
     return a
+
+
+# ------------------------------------------------- standard DOE allocation ---
+def envelope_doe(d, vmin=None, fairness="proportional", verbose=False):
+    """Textbook DOE allocation: the benchmark this framework is measured against.
+
+    This is what a DNSP does today. For each interval independently it solves
+
+        max  sum_h  f(P_h)      s.t.  network secure with hub net imports P_h,
+                                      0 <= P_h <= PCC rating
+
+    with f = log (proportional fairness) or f = identity (maximum efficiency).
+    The allocation is CONNECTION-SPECIFIC and PER-INTERVAL: it has no access to
+    the timetable, to vehicle state of charge, or to the fact that the same
+    vehicle will appear at a different hub twenty minutes later. That is not an
+    oversight in the method -- it is the definition of a DOE (Barzegar et al.
+    2026: "connection-specific ... rather than the aggregate flexibility of a
+    portfolio of DERs"). The question this function exists to answer is whether
+    that definition is sufficient for a circulating fleet.
+    """
+    net = d["net"]
+    H, Tn = len(S.HUBS), S.T_DAY
+    vmin = S.V_MIN if vmin is None else vmin
+    sb = S.S_BASE_KVA
+    nl = d["netload15"] / sb
+
+    # strip the hub net load out of the base case: the allocation IS the hub's
+    # total net import, not an increment on top of its site load
+    u0h = net.u0 + net.Mu @ nl
+    Pbh = net.Pb - net.G @ nl
+    lim = np.sqrt(np.maximum(net.smax[:, None] ** 2 - net.Qb ** 2, 1e-9))
+    pcc = np.array([h.p_pcc_kw for h in S.HUBS]) / sb
+
+    P = cp.Variable(H, nonneg=True)
+    p_u0 = cp.Parameter(S.N_BUS)
+    p_pb = cp.Parameter(len(S.BRANCH))
+    p_lim = cp.Parameter(len(S.BRANCH), nonneg=True)
+    U = p_u0 - net.Mu @ P
+    FL = p_pb + net.G @ P
+    cons = [U >= vmin ** 2, U <= S.V_MAX ** 2,
+            FL <= p_lim, FL >= -p_lim,
+            FL[0] <= S.SUB_MVA * 1000.0 / sb * 0.93,
+            P <= pcc]
+    obj = cp.sum(cp.log(P + 1e-4)) if fairness == "proportional" else cp.sum(P)
+    prob = cp.Problem(cp.Maximize(obj), cons)
+
+    out = np.zeros((H, Tn))
+    t0 = time.perf_counter()
+    for t in range(Tn):
+        p_u0.value = u0h[:, t]; p_pb.value = Pbh[:, t]; p_lim.value = lim[:, t]
+        try:
+            prob.solve(solver=cp.CLARABEL, warm_start=True)
+        except Exception:
+            continue
+        if P.value is not None:
+            out[:, t] = np.maximum(P.value, 0.0) * sb
+    if verbose:
+        print(f"  DOE allocation ({fairness}): {time.perf_counter()-t0:.1f} s, "
+              f"mean {out.mean():.0f} kW, min {out.min():.0f} kW", flush=True)
+    return out

@@ -436,7 +436,17 @@ def stage_case(which):
                 dict(mode="roll", env_on_net=True)),
         "C2e": ("C2e Rolling + AC-corrected LinDistFlow",
                 dict(mode="roll", env_on_net=True, ac_correct=True)),
+        "CDOE": ("CD  Standard DOE allocation (fleet-blind)",
+                 dict(mode="hier", env_on_net=True)),
     }[which]
+    if which == "CDOE":
+        # textbook DOE: connection-specific, per-interval, no timetable or SoC.
+        # The hub then optimises its own bill inside it at the retail tariff --
+        # the DNSP sends a limit, not a price.
+        kw["pmax15"] = coord.envelope_doe(
+            d, fairness=os.environ.get("DOE_FAIR", "proportional"),
+            vmin=float(os.environ.get("DOE_VMIN", S.V_MIN)), verbose=True)
+        kw["lam15"] = None
     if which == "C2b":
         a = pickle.load(open("admm_sb.pkl", "rb"))
         kw.update(pmax15=a["pmax"], lam15=a["lam"])
