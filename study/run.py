@@ -2,7 +2,7 @@
 1-minute MPC, and nonlinear AC evaluation of every case."""
 from __future__ import annotations
 import numpy as np, json, time, sys
-import system as S, transit as T, powerflow as PF, opt
+import system as S, transit as T, powerflow as PF, opt, coord
 
 RES = {}
 
@@ -90,7 +90,27 @@ def envelope(d, P, u, flow, vmin=None):
 
 
 # ------------------------------------------------------- closed-loop sim ----
-def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True):
+def forecast_series(d, seed, pv_std=0.10, load_std=0.02, clip=0.30):
+    """Sec. 3.5-i: the MPC plans on forecasts, the plant realises the truth.
+    Multiplicative, correlated error on PV and site load; the dispatch is then
+    executed against the measured series in `evaluate`."""
+    rng = np.random.default_rng(seed)
+    H, K = len(S.HUBS), S.K_DAY
+    kern = np.exp(-0.5 * (np.arange(-45, 46) / 18.0) ** 2); kern /= kern.sum()
+
+    def err(std):
+        e = np.stack([np.convolve(rng.normal(0, 1, K), kern, mode="same")
+                      for _ in range(H)])
+        e = e / max(e.std(), 1e-9) * std
+        return np.clip(e, -clip, clip)
+
+    pv_f = np.clip(d["exo"]["pv_hub"] * (1 + err(pv_std)), 0.0, None)
+    ld_f = np.clip(d["exo"]["load_hub"] * (1 + err(load_std)), 0.0, None)
+    return ld_f - pv_f
+
+
+def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True,
+             netload_fc=None):
     """mode: 'dumb' | 'local' | 'hier'"""
     H, K, NV = len(S.HUBS), S.K_DAY, T.N_VEH
     av, edrv, deps = d["av"], d["edrv"], d["deps"]
@@ -129,8 +149,9 @@ def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True):
             # premium, so the receding horizon does not walk the fleet down
             phi = 1.20 * float(np.mean(lam1[h, k:min(k + 300, K)])) \
                 * T.E_VEH_KWH * T.ETA_CHG
+            nl_h = (d["netload"] if netload_fc is None else netload_fc)[h]
             r = opt.hub_mpc(h, k, Np, av, edrv, deps, soc, bess,
-                            lam1[h], pmax1[h], d["netload"][h], phi=phi,
+                            lam1[h], pmax1[h], nl_h, phi=phi,
                             n_apply=na)
             nj = r["pchg"].shape[1]
             Pchg[h, :, k:k + nj] = r["pchg"]
@@ -235,6 +256,37 @@ def stage_admm(vmin_ul=None, tag=""):
                 open(f"admm{tag}.pkl", "wb"))
 
 
+def stage_coord(band=None, tag="", fseed=None):
+    """True-QP ADMM coordination followed by the jointly-certified envelope.
+
+    With `fseed` set, the coordination layer plans on a perturbed forecast of
+    PV, site load and feeder base load, while the envelope it dispatches is
+    later executed against the true realisation. This is the experiment that
+    actually tests Sec. 3.5: the hub MPC is insensitive to site-forecast error
+    by construction (its envelope and price are both stated on controllable
+    power), so the exposure lives entirely in the upper level.
+    """
+    d = setup()
+    if fseed is not None:
+        d = perturb_forecast(d, int(fseed))
+    print(f"route leg {d['leg_kwh']:.2f} kWh / {d['leg_km']:.2f} km "
+          f"({d['leg_kwh']/d['leg_km']:.2f} kWh/km), cycle {d['cycle']} min",
+          flush=True)
+    a = coord.admm_qp(d, rho=1.2e-2, iters=60, eps_abs=0.02)
+    vm = S.V_MIN if band is None else band
+    pmax, RP, RM = coord.envelope_joint(d, a["P"], a["u"], a["flow"],
+                                        vmin=vm, verbose=True)
+    chk = coord.verify_envelope(d, pmax, vmin=S.V_MIN)
+    print(f"  corner certificate vs 0.95 p.u.: {chk['v_ok']} "
+          f"(worst {chk['v_worst']:.4f}), thermal {chk['s_ok']}, "
+          f"substation {chk['sub_ok']}", flush=True)
+    out = dict(hist=a["hist"], lam=a["lam"], P=a["P"], F=a["F"], pmax=pmax,
+               margin=RP, margin_dn=RM, eps=a["eps"], t_ul=a["t_ul"],
+               t_fleet=a["t_fleet"], obj_ul=a["obj_ul"],
+               obj_fleet=a["obj_fleet"], rho=a["rho"], check=chk, band=vm)
+    pickle.dump(out, open(f"admm{tag}.pkl", "wb"))
+
+
 def stage_env_sb(vmin=0.963):
     """Recompute the dispatched envelope from the converged upper-level
     solution against a de-rated voltage floor (Sec. 3.5-ii security band).
@@ -251,6 +303,44 @@ def stage_env_sb(vmin=0.963):
           f"{margin.size}", flush=True)
     b = dict(a); b["pmax"] = pmax; b["margin"] = margin
     pickle.dump(b, open("admm_sb.pkl", "wb"))
+
+
+def perturb_forecast(d, seed, pv_std=0.10, load_std=0.02, feeder_std=0.05,
+                     clip=0.30):
+    """Return a copy of the scenario in which every quantity the upper level
+    forecasts is perturbed. The true series stay in `d["exo_true"]`."""
+    import copy
+    rng = np.random.default_rng(seed)
+    K, H = S.K_DAY, len(S.HUBS)
+    kern = np.exp(-0.5 * (np.arange(-45, 46) / 18.0) ** 2); kern /= kern.sum()
+
+    def err(shape, std):
+        e = np.stack([np.convolve(rng.normal(0, 1, K), kern, mode="same")
+                      for _ in range(shape)])
+        return np.clip(e / max(e.std(), 1e-9) * std, -clip, clip)
+
+    d2 = dict(d)
+    exo = {k: (v.copy() if hasattr(v, "copy") else v)
+           for k, v in d["exo"].items()}
+    pv_e, ld_e = err(H, pv_std), err(H, load_std)
+    fd_e = err(1, feeder_std)[0]
+    pv_f = np.clip(exo["pv_hub"] * (1 + pv_e), 0.0, None)
+    ld_f = np.clip(exo["load_hub"] * (1 + ld_e), 0.0, None)
+    dP = (ld_f - exo["load_hub"]) - (pv_f - exo["pv_hub"])
+    P = exo["P_feeder"].copy(); Q = exo["Q_feeder"].copy()
+    for h in range(H):
+        P[S.HUBS[h].bus - 1] += dP[h]
+    for b in range(S.N_BUS):                       # feeder-wide load forecast
+        if b not in [S.HUBS[h].bus - 1 for h in range(H)]:
+            P[b] *= (1 + fd_e); Q[b] *= (1 + fd_e)
+    exo["pv_hub"], exo["load_hub"] = pv_f, ld_f
+    exo["P_feeder"], exo["Q_feeder"] = P, Q
+    d2["exo_true"] = d["exo"]
+    d2["exo"] = exo
+    d2["netload"] = ld_f - pv_f
+    d2["netload15"] = d2["netload"].reshape(H, S.T_DAY, 15).mean(2)
+    d2["net"] = opt.Network(d["feeder"], exo)
+    return d2
 
 
 def _store(label, r):
@@ -271,9 +361,15 @@ def stage_case(which):
         "C2b": ("C2b Hierarchical + security band", dict(mode="hier")),
     }[which]
     if which == "C2b":
-        a2 = pickle.load(open("admm_sb.pkl", "rb"))
-        kw.update(pmax15=a2["pmax"], lam15=a2["lam"])
+        a = pickle.load(open("admm_sb.pkl", "rb"))
+        kw.update(pmax15=a["pmax"], lam15=a["lam"])
     print(f"== {label} ==", flush=True)
+    ci = int(os.environ.get("CTRL_INT", 2))
+    kw["ctrl_int"] = ci
+    fseed = os.environ.get("FORECAST_SEED")
+    if fseed is not None:
+        # the plant realises the truth; only the envelope was built on forecast
+        label = label + f" [fc seed {fseed}]"
     t0 = time.perf_counter()
     sim = simulate(d, **kw)
     r = evaluate(d, sim, label)
@@ -322,6 +418,11 @@ if __name__ == "__main__":
     cmd = sys.argv[1]
     if cmd == "admm":
         stage_admm()
+    elif cmd == "coord":
+        stage_coord()
+    elif cmd == "coord_sb":
+        stage_coord(band=float(os.environ.get("BAND", 0.955)), tag="_sb",
+                    fseed=os.environ.get("FORECAST_SEED"))
     elif cmd == "admm_sb":
         stage_env_sb()
     elif cmd == "bound":

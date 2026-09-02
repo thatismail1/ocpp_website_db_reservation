@@ -1,6 +1,7 @@
 """Transit layer: longitudinal bus model (LL-3), route energy, and the
 timetable that produces the dwell indicators a_{b,tau} at each hub."""
 from __future__ import annotations
+import os
 import numpy as np
 from dataclasses import dataclass
 from typing import List
@@ -68,7 +69,7 @@ E_RESERVE_KWH = 10.0
 
 DWELL = {"A": 8, "B": 8, "C": 3, "D": 0}     # minutes at each hub
 LEG_MIN = 22                                  # driving minutes per leg
-N_VEH = 12
+N_VEH = int(os.environ.get("N_VEH", 12))
 SERVICE_START, SERVICE_END = 5 * 60, 23 * 60  # 05:00 - 23:00
 DEPOT_IN, DEPOT_OUT = 23 * 60 + 30, 4 * 60 + 40
 

@@ -1,6 +1,7 @@
 """IEEE 33-bus feeder, transit network, and exogenous profiles for the
 hierarchical bi-level opportunity-charging case study."""
 from __future__ import annotations
+import os
 import numpy as np
 from dataclasses import dataclass, field
 
@@ -37,7 +38,8 @@ LOAD = {
 N_BUS = 33
 SUB_MVA = 5.0                       # substation transformer rating [MVA]
 V_REF = 1.04                        # substation OLTC set point [p.u.]
-LOAD_SCALE = 0.60                   # feeder operating point vs nominal peak
+LOAD_SCALE = float(os.environ.get("FEEDER_LOAD", 0.60))   # operating point
+PV_SCALE = float(os.environ.get("PV_SCALE", 1.0))          # PV penetration
 REV_LIMIT_KW = 1000.0               # permitted reverse flow at substation
 BRANCH_S_MAX_KVA = 5000.0           # trunk rating; laterals derated below
 
@@ -170,7 +172,7 @@ def build_exogenous(seed=7):
     pv = pv_shape(seed=seed)
     out = {}
     out["price"] = tariff_1min()
-    out["pv_hub"] = np.stack([h.pv_kwp * pv for h in HUBS])          # (H,K)
+    out["pv_hub"] = np.stack([PV_SCALE * h.pv_kwp * pv for h in HUBS])  # (H,K)
     out["load_hub"] = np.stack([h.base_load_kw * site_load_shape(phase=0.3 * i)
                                 for i, h in enumerate(HUBS)])        # (H,K)
     fs = feeder_load_shape()
