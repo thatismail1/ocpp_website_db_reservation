@@ -117,6 +117,14 @@ HUBS = [
 # capacity (same lateral) or are electrically near-independent (separate
 # laterals) turns out to decide whether fleet-aware allocation beats a
 # connection-specific one.
+# For the distance sweep hub C is modelled as a bare en-route charging point
+# with no building load and no canopy PV. Relocating it then leaves the base
+# case *identical* at every placement, so electrical coupling between hub A
+# and hub C is the only quantity that varies -- no load recalibration needed.
+if os.environ.get("HUB_C_BARE"):
+    HUBS[2].base_load_kw = 0.0
+    HUBS[2].pv_kwp = 0.0
+
 _hb = os.environ.get("HUB_BUSES")
 if _hb:
     for _h, _b in zip(HUBS, [int(x) for x in _hb.split(",")]):
