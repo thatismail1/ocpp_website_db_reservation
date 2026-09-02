@@ -1,0 +1,22 @@
+{
+ "1": {
+  "V_min": 0.9500184137605018,
+  "undervolt_bus_min": 0,
+  "Ssub_peak_kVA": 4114.079493731239,
+  "loss_MWh": 1.7699587154065404,
+  "cost_adjusted": 151149.23904361358,
+  "deficit_kWh": 0.0,
+  "charge_energy_MWh": 5.292564831891088,
+  "soc_end_mean": 0.4760107483509761
+ },
+ "2": {
+  "V_min": 0.9504927649255657,
+  "undervolt_bus_min": 0,
+  "Ssub_peak_kVA": 4167.184461409697,
+  "loss_MWh": 1.7886331868523468,
+  "cost_adjusted": 151271.19810893043,
+  "deficit_kWh": 0.0,
+  "charge_energy_MWh": 5.487874700718709,
+  "soc_end_mean": 0.5275508526249317
+ }
+}

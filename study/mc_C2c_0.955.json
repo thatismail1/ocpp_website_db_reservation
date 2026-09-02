@@ -1,0 +1,62 @@
+{
+ "1": {
+  "V_min": 0.9477685553261825,
+  "undervolt_bus_min": 23,
+  "undervolt_minutes": 23,
+  "Ssub_peak_kVA": 3945.0354905182603,
+  "loss_MWh": 1.7477474771166104,
+  "cost_adjusted": 150955.16719155665,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.063095757933898,
+  "soc_end_mean": 0.41545640939005074
+ },
+ "2": {
+  "V_min": 0.9505152643638506,
+  "undervolt_bus_min": 0,
+  "undervolt_minutes": 0,
+  "Ssub_peak_kVA": 3913.876530022772,
+  "loss_MWh": 1.7495519117947913,
+  "cost_adjusted": 150963.54854431027,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.078537832635702,
+  "soc_end_mean": 0.41953140132524885
+ },
+ "4": {
+  "V_min": 0.9496564756372908,
+  "undervolt_bus_min": 6,
+  "undervolt_minutes": 6,
+  "Ssub_peak_kVA": 3905.9925424799426,
+  "loss_MWh": 1.7469372714282858,
+  "cost_adjusted": 150948.35329599617,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.051981779830923,
+  "soc_end_mean": 0.4125235540573214
+ },
+ "5": {
+  "V_min": 0.947478652949538,
+  "undervolt_bus_min": 22,
+  "undervolt_minutes": 22,
+  "Ssub_peak_kVA": 3978.3251089383643,
+  "loss_MWh": 1.7494561874716987,
+  "cost_adjusted": 150963.07004070602,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.075215106316196,
+  "soc_end_mean": 0.41865457076871254
+ },
+ "15": {
+  "V_min": 0.948722612352795,
+  "undervolt_bus_min": 23,
+  "undervolt_minutes": 23,
+  "Ssub_peak_kVA": 3944.2165534656147,
+  "loss_MWh": 1.7479774102403027,
+  "cost_adjusted": 150954.87264361224,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.0625930153832615,
+  "soc_end_mean": 0.41532374121696614
+ }
+}

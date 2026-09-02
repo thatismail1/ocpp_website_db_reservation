@@ -1,3 +1,4 @@
 *.pkl
 run.log
 __pycache__/
+cases.pkl

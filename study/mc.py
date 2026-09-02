@@ -1,10 +1,11 @@
 """Forecast-error Monte Carlo (Sec. 3.5-i)."""
 import os, sys, json, subprocess, pickle, time
+BAND = os.environ.get("BAND", "0.955")
 BASE = dict(PV_SCALE="1.0", N_VEH="12", FEEDER_LOAD="0.60", CTRL_INT="5",
-            BAND="0.955")
+            BAND=BAND)
 CASE = sys.argv[1] if len(sys.argv) > 1 else "C2b"
 SEEDS = [int(x) for x in sys.argv[2].split(",")] if len(sys.argv) > 2 else range(1, 16)
-fn = f"mc_{CASE}.json"
+fn = f"mc_{CASE}_{BAND}.json"
 res = json.load(open(fn)) if os.path.exists(fn) else {}
 for sd in SEEDS:
     if str(sd) in res:
@@ -13,10 +14,12 @@ for sd in SEEDS:
     if os.path.exists("cases.pkl"):
         os.remove("cases.pkl")
     t0 = time.perf_counter()
-    rc = subprocess.run([sys.executable, "run.py", "coord_sb"], env=e,
-                        capture_output=True, text=True, timeout=900)
-    if rc.returncode != 0:
-        print(f"seed {sd} coord FAILED\n{rc.stdout[-600:]}{rc.stderr[-600:]}"); continue
+    if CASE not in ("C2d", "C2e"):     # rolling cases coordinate internally
+        rc = subprocess.run([sys.executable, "run.py", "coord_sb"], env=e,
+                            capture_output=True, text=True, timeout=900)
+        if rc.returncode != 0:
+            print(f"seed {sd} coord FAILED\n{rc.stdout[-600:]}{rc.stderr[-600:]}")
+            continue
     r = subprocess.run([sys.executable, "run.py", CASE], env=e,
                        capture_output=True, text=True, timeout=900)
     if r.returncode != 0:

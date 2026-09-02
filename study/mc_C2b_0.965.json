@@ -1,0 +1,74 @@
+{
+ "1": {
+  "V_min": 0.947321071287824,
+  "undervolt_bus_min": 25,
+  "undervolt_minutes": 25,
+  "Ssub_peak_kVA": 3962.4052531150046,
+  "loss_MWh": 1.7326112370847369,
+  "cost_adjusted": 150891.2539560852,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 4.973176671546306,
+  "soc_end_mean": 0.39172776159332573
+ },
+ "2": {
+  "V_min": 0.9500477314214354,
+  "undervolt_bus_min": 0,
+  "undervolt_minutes": 0,
+  "Ssub_peak_kVA": 3919.3950289025397,
+  "loss_MWh": 1.7362869987983798,
+  "cost_adjusted": 150916.65554234548,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 4.9966398479163745,
+  "soc_end_mean": 0.3979194331354268
+ },
+ "3": {
+  "V_min": 0.9485029011398782,
+  "undervolt_bus_min": 13,
+  "undervolt_minutes": 13,
+  "Ssub_peak_kVA": 3952.458725529869,
+  "loss_MWh": 1.737398004858088,
+  "cost_adjusted": 150921.71263586017,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.012434579071054,
+  "soc_end_mean": 0.4020874871901339
+ },
+ "4": {
+  "V_min": 0.949695521789255,
+  "undervolt_bus_min": 3,
+  "undervolt_minutes": 3,
+  "Ssub_peak_kVA": 3914.3823929766495,
+  "loss_MWh": 1.7327446146089454,
+  "cost_adjusted": 150897.53803844357,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 4.972183257711522,
+  "soc_end_mean": 0.39146561072025654
+ },
+ "5": {
+  "V_min": 0.9478359724281435,
+  "undervolt_bus_min": 15,
+  "undervolt_minutes": 15,
+  "Ssub_peak_kVA": 3971.607739086522,
+  "loss_MWh": 1.7376211117879459,
+  "cost_adjusted": 150913.7874220365,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.022742201366297,
+  "soc_end_mean": 0.40480755418471187
+ },
+ "15": {
+  "V_min": 0.9471746254863003,
+  "undervolt_bus_min": 27,
+  "undervolt_minutes": 27,
+  "Ssub_peak_kVA": 3968.1256546802306,
+  "loss_MWh": 1.7359637794548113,
+  "cost_adjusted": 150908.78980330084,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 4.999064468350698,
+  "soc_end_mean": 0.39855926352781784
+ }
+}

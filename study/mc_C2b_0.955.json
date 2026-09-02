@@ -1,0 +1,74 @@
+{
+ "1": {
+  "V_min": 0.947321071287824,
+  "undervolt_bus_min": 25,
+  "undervolt_minutes": 25,
+  "Ssub_peak_kVA": 3962.4052531150046,
+  "loss_MWh": 1.7480531773395407,
+  "cost_adjusted": 150957.2892208514,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.06727567140109,
+  "soc_end_mean": 0.4165594421105597
+ },
+ "2": {
+  "V_min": 0.9500477314214354,
+  "undervolt_bus_min": 0,
+  "undervolt_minutes": 0,
+  "Ssub_peak_kVA": 3919.3950289025397,
+  "loss_MWh": 1.7477091017835251,
+  "cost_adjusted": 150954.5294024899,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.0654437569073725,
+  "soc_end_mean": 0.4160760202302733
+ },
+ "3": {
+  "V_min": 0.9485029011398782,
+  "undervolt_bus_min": 14,
+  "undervolt_minutes": 14,
+  "Ssub_peak_kVA": 3952.458725529869,
+  "loss_MWh": 1.7511650281361735,
+  "cost_adjusted": 150973.72090095395,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.094932690062322,
+  "soc_end_mean": 0.42385782203505135
+ },
+ "4": {
+  "V_min": 0.949695521789255,
+  "undervolt_bus_min": 3,
+  "undervolt_minutes": 3,
+  "Ssub_peak_kVA": 3914.3823929766495,
+  "loss_MWh": 1.7462369263198614,
+  "cost_adjusted": 150944.38874691806,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.048008529099274,
+  "soc_end_mean": 0.41147505733646944
+ },
+ "5": {
+  "V_min": 0.9478359724281435,
+  "undervolt_bus_min": 15,
+  "undervolt_minutes": 15,
+  "Ssub_peak_kVA": 3971.607739086522,
+  "loss_MWh": 1.7494970047320564,
+  "cost_adjusted": 150963.1198546764,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.075871701965221,
+  "soc_end_mean": 0.4188278390649834
+ },
+ "15": {
+  "V_min": 0.9471746254863003,
+  "undervolt_bus_min": 27,
+  "undervolt_minutes": 27,
+  "Ssub_peak_kVA": 3968.1256546802306,
+  "loss_MWh": 1.7486743216376688,
+  "cost_adjusted": 150957.75747913925,
+  "deficit_kWh": 0.0,
+  "deficit_events": 0,
+  "charge_energy_MWh": 5.065751549254141,
+  "soc_end_mean": 0.41615724321067077
+ }
+}

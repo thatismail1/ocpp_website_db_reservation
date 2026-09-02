@@ -5,8 +5,13 @@ import system as S, transit as T
 
 d = pickle.load(open("results.pkl", "rb"))
 out = d["out"]
-labels = [k for k in out if k.startswith("C")]
-labels.sort()
+ORDER = ["C0  Uncoordinated", "C1  Local MPC (TOU, site cap)",
+         "C2  Hierarchical bi-level", "C2b Hierarchical + security band",
+         "C2c Hierarchical, net-import envelope",
+         "C2d Rolling upper level, net-import envelope",
+         "C2e Rolling + AC-corrected LinDistFlow",
+         "C3  Centralised 15-min bound"]
+labels = [k for k in ORDER if k in out]
 
 def g(r, k, f="%.4g"):
     return f % r[k] if k in r else "--"
@@ -47,19 +52,22 @@ rows = [
     ("Departure deficit [kWh]", "deficit_kWh", "%.2f"),
     ("Minimum fleet SoC [p.u.]", "soc_min", "%.3f"),
     ("Mean end-of-day SoC [p.u.]", "soc_end_mean", "%.3f"),
+    ("Envelope excess, max", "env_excess_max_kW", "%.1f"),
+    ("Upper-level re-dispatches", "ul_ticks", "%d"),
     ("MPC solves", "n_solves", "%d"),
     ("Mean solve time [ms]", "t_mean_ms", "%.1f"),
     ("Max solve time [ms]", "t_max_ms", "%.1f"),
     ("Closed-loop wall time [s]", "wall_s", "%.0f"),
 ]
-w = 40
-hdr = "Metric".ljust(w) + "".join(l[:3].rjust(14) for l in labels)
+w = 36
+SHORT = {l: l.split()[0] for l in labels}
+hdr = "Metric".ljust(w) + "".join(SHORT[l].rjust(11) for l in labels)
 print(hdr); print("-" * len(hdr))
 for name, key, fmt in rows:
     line = name.ljust(w)
     for l in labels:
         r = out[l]
-        line += (fmt % r[key]).rjust(14) if key in r else "--".rjust(14)
+        line += (fmt % r[key]).rjust(11) if key in r else "--".rjust(11)
     print(line)
 
 print("\nHub peak import [kW]:")
@@ -67,7 +75,9 @@ for l in labels:
     if "hub_peak_kW" in out[l]:
         print("  %-32s" % l, [round(x) for x in out[l]["hub_peak_kW"]])
 
-a = out["admm"]
+a = out.get("admm")
+if a is None:
+    import pickle as _p; a = _p.load(open("admm_sb.pkl","rb"))
 print("\n================= ADMM =================")
 print("iterations run      :", len(a["hist"]))
 print("final primal resid  : %.1f kW  (RMS %.1f kW per hub-interval)"

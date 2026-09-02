@@ -242,7 +242,7 @@ def fleet_lp(av15, edrv15, deps, price, rho=0.0, target=None, lam=None,
 # ================================================ HUB MPC (1 min, LL-1..LL-10)
 def hub_mpc(h, k, Np, av, edrv, deps, soc_now, bess_now, lam, pmax_env,
             netload, w_deg=0.012, w_eps=3000.0, phi=None, mip_gap=1e-4,
-            n_apply=1):
+            n_apply=1, env_on_net=False):
     """One receding-horizon solve for hub h at minute k. Returns first sample."""
     hub = S.HUBS[h]
     K = min(k + Np, S.K_DAY)
@@ -272,6 +272,7 @@ def hub_mpc(h, k, Np, av, edrv, deps, soc_now, bess_now, lam, pmax_env,
           if d[1] == h and k <= d[2] < K and d[0] in veh]
     m.eps = pyo.Var([i for i, _ in dk], bounds=(0, 0.6))
     m.c = pyo.ConstraintList()
+    m.env_sl = pyo.Var(W, domain=pyo.NonNegativeReals)   # envelope slack
     P_KNEE = 0.6 * hub.p_bay_kw
 
     for b in veh:
@@ -304,7 +305,14 @@ def hub_mpc(h, k, Np, av, edrv, deps, soc_now, bess_now, lam, pmax_env,
     # LL-8/LL-9 site balance and dispatched envelope
     for t in W:
         ctrl = sum(m.pc[b, t] for b in veh) + ((m.bc[t] - m.bd[t]) if has_b else 0.0)
-        m.c.add(ctrl <= max(pmax_env[t], 0.0))                 # LL-9 envelope
+        if env_on_net:
+            # LL-9 stated on NET PCC import: the hub measures its own site
+            # load and PV each minute and absorbs its own forecast error by
+            # trimming charging, so the injection the feeder was certified
+            # against is delivered whatever the site does.
+            m.c.add(netload[t] + ctrl <= max(pmax_env[t], 0.0) + m.env_sl[t])
+        else:
+            m.c.add(ctrl <= max(pmax_env[t], 0.0) + m.env_sl[t])
         m.c.add(netload[t] + ctrl <= hub.p_pcc_kw)              # site capacity
 
     if phi is None:
@@ -318,6 +326,7 @@ def hub_mpc(h, k, Np, av, edrv, deps, soc_now, bess_now, lam, pmax_env,
         obj += w_deg * sum((m.bc[t] + m.bd[t]) * S.DT_LL for t in W)
     obj += w_eps * sum(m.eps[i] for i, _ in dk)
     obj += 4.0 * w_eps * sum(m.sl[b, t] for b in veh for t in range(k, K + 1))
+    obj += 200.0 * sum(m.env_sl[t] for t in W)
     obj -= phi * sum(m.soc[b, K] for b in veh)
     if has_b:
         obj -= phi * 0.5 * m.bs[K]

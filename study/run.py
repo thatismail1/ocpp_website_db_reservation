@@ -110,8 +110,15 @@ def forecast_series(d, seed, pv_std=0.10, load_std=0.02, clip=0.30):
 
 
 def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True,
-             netload_fc=None):
-    """mode: 'dumb' | 'local' | 'hier'"""
+             netload_fc=None, env_on_net=False, d_plan=None, band=0.955,
+             tick_min=60, ac_correct=False):
+    """mode: 'dumb' | 'local' | 'hier' | 'roll'
+
+    'roll' is the framework as specified: the upper level re-solves on a
+    rolling window every `tick_min` minutes against the fleet's measured SoC,
+    so feeder-load forecast error is rejected in closed loop instead of being
+    carried for the whole day.
+    """
     H, K, NV = len(S.HUBS), S.K_DAY, T.N_VEH
     av, edrv, deps = d["av"], d["edrv"], d["deps"]
     soc = np.full(NV, T.SOC_START)
@@ -130,9 +137,29 @@ def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True,
     else:
         lam1 = np.repeat(lam15, 15, axis=1)   # distribution nodal price (UL-10)
     hD = S.HUB_IDX["D"]
+    dp = d if d_plan is None else d_plan
+    ul_ticks, ul_time = 0, 0.0
     k = 0
     while k < K:
         na = min(ctrl_int, K - k)
+        if mode == "roll" and k % tick_min == 0:
+            t15 = k // 15
+            t0c = time.perf_counter()
+            if ac_correct:
+                a = coord.coordinate_ac(dp, t0=t15, soc0=soc, bess0=bess,
+                                        band=band)
+            else:
+                a = coord.admm_qp(dp, rho=1.2e-2, iters=60, eps_abs=0.02,
+                                  verbose=False, t0=t15, soc0=soc, bess0=bess)
+            pm, _, _ = coord.envelope_joint(dp, a["P"], a["u"], a["flow"],
+                                            vmin=band, t0=t15)
+            pm_net = dp["netload15"][:, t15:] + pm
+            end = min(k + tick_min, K)
+            n15 = int(np.ceil((end - k) / 15))
+            pmax1[:, k:end] = np.repeat(pm_net[:, :n15], 15, axis=1)[:, :end - k]
+            lam1[:, k:end] = np.repeat(a["lam"][:, :n15], 15, axis=1)[:, :end - k]
+            ul_ticks += 1
+            ul_time += time.perf_counter() - t0c
         for h in range(H):
             present = av[h, :, k:min(k + Np, K)].any()
             if not present:
@@ -152,7 +179,7 @@ def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True,
             nl_h = (d["netload"] if netload_fc is None else netload_fc)[h]
             r = opt.hub_mpc(h, k, Np, av, edrv, deps, soc, bess,
                             lam1[h], pmax1[h], nl_h, phi=phi,
-                            n_apply=na)
+                            n_apply=na, env_on_net=env_on_net)
             nj = r["pchg"].shape[1]
             Pchg[h, :, k:k + nj] = r["pchg"]
             if h == hD:
@@ -172,7 +199,8 @@ def simulate(d, mode, pmax15=None, lam15=None, Np=40, ctrl_int=2, verbose=True,
         if verbose and k % 240 == 0:
             print(f"    t={k//60:02d}:00  solves={len(tsolve)}", flush=True)
     return dict(Pchg=Pchg, Pbess=Pb, soc=socs, bess=bs,
-                tsolve=np.array(tsolve))
+                tsolve=np.array(tsolve), ul_ticks=ul_ticks, ul_time=ul_time,
+                pmax1=pmax1, env_on_net=env_on_net)
 
 
 # ------------------------------------------------------------ evaluation ---
@@ -196,6 +224,13 @@ def evaluate(d, sim, label):
         defs.append(max(0.0, need - sim["soc"][b, dm]))
     defs = np.array(defs)
     hub_import = d["netload"] + ctrl
+    # did the hubs actually respect the dispatched envelope?
+    pm1 = sim.get("pmax1")
+    if pm1 is not None:
+        lhs = hub_import if sim.get("env_on_net") else ctrl
+        exc = np.maximum(lhs - pm1, 0.0)
+    else:
+        exc = np.zeros((1, 1))
     r = dict(
         case=label,
         V_min=float(Vm.min()),
@@ -226,6 +261,9 @@ def evaluate(d, sim, label):
         cost_adjusted=float((price * pf["Psub_kw"]).sum() * S.DT_LL
                             + max(0.0, (T.SOC_START - sim["soc"][:, -1]).sum())
                             * T.E_VEH_KWH / T.ETA_CHG * float(price.mean())),
+        env_excess_max_kW=float(exc.max()),
+        env_excess_kWh=float(exc.sum() / 60.0),
+        env_breach_min=int((exc.max(0) > 1.0).sum()),
         n_solves=int(len(sim["tsolve"])),
         t_mean_ms=float(sim["tsolve"].mean() * 1000) if len(sim["tsolve"]) else 0.0,
         t_max_ms=float(sim["tsolve"].max() * 1000) if len(sim["tsolve"]) else 0.0,
@@ -283,7 +321,8 @@ def stage_coord(band=None, tag="", fseed=None):
     out = dict(hist=a["hist"], lam=a["lam"], P=a["P"], F=a["F"], pmax=pmax,
                margin=RP, margin_dn=RM, eps=a["eps"], t_ul=a["t_ul"],
                t_fleet=a["t_fleet"], obj_ul=a["obj_ul"],
-               obj_fleet=a["obj_fleet"], rho=a["rho"], check=chk, band=vm)
+               obj_fleet=a["obj_fleet"], rho=a["rho"], check=chk, band=vm,
+               netload15=d["netload15"], curt=a.get("curt"))
     pickle.dump(out, open(f"admm{tag}.pkl", "wb"))
 
 
@@ -343,6 +382,38 @@ def perturb_forecast(d, seed, pv_std=0.10, load_std=0.02, feeder_std=0.05,
     return d2
 
 
+def inflate_forecast(dp, d_true, z_sigma):
+    """Sec. 3.5-ii applied where the residual risk actually is.
+
+    The security band on the voltage floor cannot absorb forecast error,
+    because the error enters through load the hubs do not control. The
+    correct place for the margin is the forecast itself: plan against feeder
+    and site load inflated by z*sigma, so the dispatched envelope is secure
+    for the upper tail of the load distribution rather than for its mean.
+    """
+    import copy
+    H = len(S.HUBS)
+    dp2 = dict(dp)
+    exo = {k: (v.copy() if hasattr(v, "copy") else v) for k, v in dp["exo"].items()}
+    exo["load_hub"] = exo["load_hub"] * (1 + z_sigma)
+    exo["pv_hub"] = exo["pv_hub"] * (1 - z_sigma)        # PV under-delivers
+    P = exo["P_feeder"].copy(); Q = exo["Q_feeder"].copy()
+    hub_buses = [S.HUBS[h].bus - 1 for h in range(H)]
+    for b in range(S.N_BUS):
+        if b not in hub_buses:
+            P[b] *= (1 + z_sigma); Q[b] *= (1 + z_sigma)
+    for h in range(H):
+        b = S.HUBS[h].bus - 1
+        P[b] = (P[b] - dp["netload"][h]) * (1 + z_sigma) \
+            + (exo["load_hub"][h] - exo["pv_hub"][h])
+    exo["P_feeder"], exo["Q_feeder"] = P, Q
+    dp2["exo"] = exo
+    dp2["netload"] = exo["load_hub"] - exo["pv_hub"]
+    dp2["netload15"] = dp2["netload"].reshape(H, S.T_DAY, 15).mean(2)
+    dp2["net"] = opt.Network(dp["feeder"], exo)
+    return dp2
+
+
 def _store(label, r):
     fn = "cases.pkl"
     cur = pickle.load(open(fn, "rb")) if os.path.exists(fn) else {}
@@ -359,10 +430,32 @@ def stage_case(which):
         "C2": ("C2  Hierarchical bi-level", dict(mode="hier", pmax15=a["pmax"],
                                                  lam15=a["lam"])),
         "C2b": ("C2b Hierarchical + security band", dict(mode="hier")),
+        "C2c": ("C2c Hierarchical, net-import envelope",
+                dict(mode="hier", env_on_net=True)),
+        "C2d": ("C2d Rolling upper level, net-import envelope",
+                dict(mode="roll", env_on_net=True)),
+        "C2e": ("C2e Rolling + AC-corrected LinDistFlow",
+                dict(mode="roll", env_on_net=True, ac_correct=True)),
     }[which]
     if which == "C2b":
         a = pickle.load(open("admm_sb.pkl", "rb"))
         kw.update(pmax15=a["pmax"], lam15=a["lam"])
+    if which in ("C2d", "C2e"):
+        # the plant is the true scenario; the coordination layer plans on the
+        # (possibly perturbed) forecast scenario
+        dp = perturb_forecast(d, int(fs)) if (
+            fs := os.environ.get("FORECAST_SEED")) else d
+        fm = float(os.environ.get("FEEDER_MARGIN", 0.0))
+        if fm > 0:
+            dp = inflate_forecast(dp, d, fm)
+        kw["d_plan"] = dp
+        kw["band"] = float(os.environ.get("BAND", 0.955))
+        kw["tick_min"] = int(os.environ.get("UL_TICK", 60))
+    if which == "C2c":
+        a = pickle.load(open("admm_sb.pkl", "rb"))
+        # envelope re-expressed on net PCC import, using the planning-time
+        # forecast of site netload that the certificate was built on
+        kw.update(pmax15=a["netload15"] + a["pmax"], lam15=a["lam"])
     print(f"== {label} ==", flush=True)
     ci = int(os.environ.get("CTRL_INT", 2))
     kw["ctrl_int"] = ci
@@ -373,6 +466,8 @@ def stage_case(which):
     t0 = time.perf_counter()
     sim = simulate(d, **kw)
     r = evaluate(d, sim, label)
+    r["ul_ticks"] = sim.get("ul_ticks", 0)
+    r["ul_time"] = sim.get("ul_time", 0.0)
     r["wall_s"] = time.perf_counter() - t0
     print(f"  Vmin {r['V_min']:.4f} | undervolt {r['undervolt_minutes']} min "
           f"({r['undervolt_bus_min']} bus-min) | Ssub {r['Ssub_peak_kVA']:.0f} kVA | "

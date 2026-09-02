@@ -16,12 +16,14 @@ QP_SOLVER = cp.CLARABEL
 
 # ------------------------------------------------------------ upper level ---
 class UpperLevel:
-    """LinDistFlow feeder dispatch, parameterised so the ADMM target and the
-    penalty can be updated without rebuilding the problem."""
+    """LinDistFlow feeder dispatch over the window [t0, T)."""
 
     def __init__(self, net, price, netload, cap, w_loss=0.9, w_v=6.0,
-                 vmin=None, rho=0.0, pv=None, w_curt=0.5):
-        H, Tn = len(S.HUBS), S.T_DAY
+                 vmin=None, rho=0.0, pv=None, w_curt=0.5, t0=0,
+                 u_corr=None):
+        H = len(S.HUBS)
+        Tn = S.T_DAY - t0
+        self.t0 = t0
         self.net, self.H, self.Tn = net, H, Tn
         vmin = S.V_MIN if vmin is None else vmin
         self.P = cp.Variable((H, Tn), name="Pctrl")            # p.u.
@@ -34,15 +36,25 @@ class UpperLevel:
         pv = np.zeros((H, Tn)) if pv is None else pv
         NET = self.P + self.curt / sb0
 
-        U = net.u0 - net.Mu @ NET                               # (33,T)
-        FLOW = net.Pb + net.G @ NET                             # (32,T)
-        pr = price.reshape(Tn, 15).mean(1)
+        u0 = net.u0[:, t0:] + (0.0 if u_corr is None else u_corr)
+        Pb = net.Pb[:, t0:]
+        Qb = net.Qb[:, t0:]
+        netload = netload[:, t0:]
+        cap = cap[:, t0:]
+        pv = None if pv is None else pv[:, t0:]
+        U = u0 - net.Mu @ NET
+        FLOW = Pb + net.G @ NET
+        pr = price.reshape(S.T_DAY, 15).mean(1)[t0:]
         sb = S.S_BASE_KVA
 
-        lim = np.sqrt(np.maximum(net.smax[:, None] ** 2 - net.Qb ** 2, 1e-9))
+        lim = np.sqrt(np.maximum(net.smax[:, None] ** 2 - Qb ** 2, 1e-9))
         lo = np.array([[-S.HUBS[h].bess_kw / sb] * Tn for h in range(H)])
         hi = np.maximum(cap, 0.0) / sb
-        cons = [U >= vmin ** 2, U <= S.V_MAX ** 2,
+        # voltage floor is soft with a prohibitive price: under a robust
+        # forecast margin the feeder can be infeasible at zero charging, and
+        # the dispatch must then degrade gracefully rather than fail
+        self.vslack = cp.Variable(U.shape, nonneg=True)
+        cons = [U + self.vslack >= vmin ** 2, U <= S.V_MAX ** 2,
                 FLOW <= lim, FLOW >= -lim,
                 self.P >= lo, self.P <= hi,
                 self.curt <= pv,
@@ -54,9 +66,10 @@ class UpperLevel:
         obj = pr @ FLOW[0] * sb * S.DT_UL
         obj += w_loss * cp.sum(cp.multiply(
             net.f.r[:, None] / S.V_REF ** 2,
-            cp.square(FLOW) + net.Qb ** 2)) * sb * S.DT_UL      # exact loss
+            cp.square(FLOW) + Qb ** 2)) * sb * S.DT_UL          # exact loss
         obj += w_v * cp.sum_squares(U - 1.0)                    # exact deviation
         obj += w_curt * cp.sum(self.curt) * S.DT_UL             # LL-10 curtailment
+        obj += 5e6 * cp.sum(self.vslack)
         if rho > 0:
             obj += (rho / 2) * cp.sum_squares(self.P * sb - self.target)
         self.prob = cp.Problem(cp.Minimize(obj), cons)
@@ -72,8 +85,8 @@ class UpperLevel:
         P = self.P.value * S.S_BASE_KVA
         self.curt_kw = self.curt.value
         net_pu = (P + self.curt_kw) / S.S_BASE_KVA
-        u = self.net.u0 - self.net.Mu @ net_pu
-        flow = self.net.Pb + self.net.G @ net_pu
+        u = self.net.u0[:, self.t0:] - self.net.Mu @ net_pu
+        flow = self.net.Pb[:, self.t0:] + self.net.G @ net_pu
         return P, u, flow, dt, float(self.prob.value)
 
 
@@ -87,8 +100,14 @@ class FleetBlock:
     """
 
     def __init__(self, av15, edrv15, deps, w_deg=0.012, w_eps=3000.0,
-                 cap_ctrl=None, rho=0.0):
-        H, Tn, NV = len(S.HUBS), S.T_DAY, T.N_VEH
+                 cap_ctrl=None, rho=0.0, t0=0, soc0=None, bess0=0.5):
+        H, NV = len(S.HUBS), T.N_VEH
+        Tn = S.T_DAY - t0
+        av15 = av15[:, :, t0:]
+        edrv15 = edrv15[:, t0:]
+        cap_ctrl = None if cap_ctrl is None else cap_ctrl[:, t0:]
+        deps = [(b, h, dm, e) for (b, h, dm, e) in deps if dm // 15 >= t0]
+        soc0 = np.full(NV, T.SOC_START) if soc0 is None else soc0
         self.H, self.Tn = H, Tn
         self.pc = [cp.Variable((NV, Tn), nonneg=True) for _ in range(H)]
         self.soc = cp.Variable((NV, Tn + 1))
@@ -100,13 +119,20 @@ class FleetBlock:
         self.bd = cp.Variable(Tn, nonneg=True)
         self.bs = cp.Variable(Tn + 1)
 
-        cons = [self.soc >= T.SOC_MIN, self.soc <= T.SOC_MAX,
-                self.soc[:, 0] == T.SOC_START,
-                self.soc[:, Tn] >= T.SOC_START,          # day-neutral
-                self.eps <= 0.6,
+        # every state bound is soft: at a rolling tick the measured SoC and
+        # the remaining timetable can be jointly unreachable, and the planner
+        # must return the least-bad plan rather than report infeasible
+        self.sl = cp.Variable((NV, Tn + 1), nonneg=True)
+        self.term = cp.Variable(NV, nonneg=True)
+        cons = [self.soc + self.sl >= T.SOC_MIN, self.soc <= T.SOC_MAX,
+                self.soc >= 0.02,
+                self.soc[:, 0] == np.clip(soc0, 0.02, T.SOC_MAX),
+                self.soc[:, Tn] + self.term >= T.SOC_START,   # day-neutral
+                self.eps <= 1.0,
                 self.bc <= S.HUBS[hD].bess_kw, self.bd <= S.HUBS[hD].bess_kw,
                 self.bs >= 0.15, self.bs <= 0.9,
-                self.bs[0] == 0.5, self.bs[Tn] >= 0.5]
+                self.bs[0] == float(np.clip(bess0, 0.15, 0.9)),
+                self.bs[Tn] >= min(float(np.clip(bess0, 0.15, 0.9)), 0.5)]
         for h in range(H):
             cons += [self.pc[h] <= av15[h] * S.HUBS[h].p_bay_kw,
                      cp.sum(self.pc[h], axis=0)
@@ -123,13 +149,17 @@ class FleetBlock:
         if cap_ctrl is not None:
             cons += [self.ctrl <= cap_ctrl]
         for k, (b, h, dm, ereq) in enumerate(deps):
-            t = min(dm // 15, Tn)
+            t = min(dm // 15 - t0, Tn)
+            if t < 0:
+                continue
             cons += [self.soc[b, t] + self.eps[k]
                      >= ereq / T.E_VEH_KWH + T.SOC_MIN]
 
         obj = w_deg * cp.sum(self.bc + self.bd) * S.DT_UL
         obj += 0.25 * w_deg * sum(cp.sum(p) for p in self.pc) * S.DT_UL
         obj += w_eps * cp.sum(self.eps)
+        obj += 4.0 * w_eps * cp.sum(self.sl)
+        obj += 0.5 * w_eps * cp.sum(self.term)
         if rho > 0:
             obj += (rho / 2) * cp.sum_squares(self.ctrl - self.target)
         self.prob = cp.Problem(cp.Minimize(obj), cons)
@@ -148,14 +178,18 @@ class FleetBlock:
 
 # ------------------------------------------------------------------ ADMM ---
 def admm_qp(d, rho=1.2e-2, iters=60, eps_abs=0.5, eps_rel=1e-3,
-            vmin=None, balance=True, verbose=True):
+            vmin=None, balance=True, verbose=True, t0=0, soc0=None,
+            bess0=0.5, u_corr=None):
     """Scaled ADMM between the feeder block and the fleet block (C-2..C-4)."""
-    H, Tn = len(S.HUBS), S.T_DAY
-    pv15 = d["exo"]["pv_hub"].reshape(len(S.HUBS), Tn, 15).mean(2)
-    ul = UpperLevel(d["net"], d["exo"]["price"], d["netload15"], d["cap15"],
-                    vmin=vmin, rho=rho, pv=pv15)
-    fb = FleetBlock(d["av15"], d["edrv15"], d["deps"], cap_ctrl=d["cap15"],
-                    rho=rho)
+    H, Tn = len(S.HUBS), S.T_DAY - t0
+    pv15 = d["exo"]["pv_hub"].reshape(len(S.HUBS), S.T_DAY, 15).mean(2)
+    mk_ul = lambda r: UpperLevel(d["net"], d["exo"]["price"], d["netload15"],
+                                 d["cap15"], vmin=vmin, rho=r, pv=pv15, t0=t0,
+                                 u_corr=u_corr)
+    mk_fb = lambda r: FleetBlock(d["av15"], d["edrv15"], d["deps"],
+                                 cap_ctrl=d["cap15"], rho=r, t0=t0, soc0=soc0,
+                                 bess0=bess0)
+    ul, fb = mk_ul(rho), mk_fb(rho)
     P = np.zeros((H, Tn)); F = np.zeros((H, Tn)); U = np.zeros((H, Tn))
     hist, tul, tfl = [], 0.0, 0.0
     u = flow = None
@@ -181,16 +215,10 @@ def admm_qp(d, rho=1.2e-2, iters=60, eps_abs=0.5, eps_rel=1e-3,
         if balance and it > 2:
             if rn > 10 * sn:
                 rho *= 2; U /= 2
-                ul = UpperLevel(d["net"], d["exo"]["price"], d["netload15"],
-                                d["cap15"], vmin=vmin, rho=rho, pv=pv15)
-                fb = FleetBlock(d["av15"], d["edrv15"], d["deps"],
-                                cap_ctrl=d["cap15"], rho=rho)
+                ul, fb = mk_ul(rho), mk_fb(rho)
             elif sn > 10 * rn:
                 rho /= 2; U *= 2
-                ul = UpperLevel(d["net"], d["exo"]["price"], d["netload15"],
-                                d["cap15"], vmin=vmin, rho=rho, pv=pv15)
-                fb = FleetBlock(d["av15"], d["edrv15"], d["deps"],
-                                cap_ctrl=d["cap15"], rho=rho)
+                ul, fb = mk_ul(rho), mk_fb(rho)
     lam = -rho * U / S.DT_UL
     return dict(P=P, F=F, lam=lam, hist=hist, u=u, flow=flow, soc15=soc,
                 curt=getattr(ul, "curt_kw", np.zeros((H, Tn))),
@@ -199,7 +227,8 @@ def admm_qp(d, rho=1.2e-2, iters=60, eps_abs=0.5, eps_rel=1e-3,
 
 
 # ------------------------------------------------- jointly-certified envelope
-def envelope_joint(d, P, u, flow, vmin=None, weights=None, verbose=False):
+def envelope_joint(d, P, u, flow, vmin=None, weights=None, verbose=False,
+                   t0=0):
     """UL-9 with a *joint* security certificate.
 
     The one-at-a-time sensitivity walk of UL-9a holds every other hub at its
@@ -223,7 +252,7 @@ def envelope_joint(d, P, u, flow, vmin=None, weights=None, verbose=False):
     without further communication, and the feeder stays secure.
     """
     net = d["net"]
-    H, Tn = len(S.HUBS), S.T_DAY
+    H, Tn = len(S.HUBS), S.T_DAY - t0
     vmin = S.V_MIN if vmin is None else vmin
     sb = S.S_BASE_KVA
     if weights is None:                      # share headroom by hub rating
@@ -254,14 +283,14 @@ def envelope_joint(d, P, u, flow, vmin=None, weights=None, verbose=False):
     prob = cp.Problem(cp.Maximize(w @ rp + 0.35 * (w @ rm)), cons)
 
     RP = np.zeros((H, Tn)); RM = np.zeros((H, Tn))
-    t0 = time.perf_counter()
+    _tic = time.perf_counter()
     for t in range(Tn):
         p_u.value = u[:, t]
         p_f.value = flow[:, t]
-        p_lim.value = lim[:, t]
+        p_lim.value = lim[:, t0 + t]
         p_hi.value = np.maximum(
-            [(S.HUBS[h].p_pcc_kw - d["netload15"][h, t]) / sb - P[h, t] / sb
-             for h in range(H)], 0.0)
+            [(S.HUBS[h].p_pcc_kw - d["netload15"][h, t0 + t]) / sb
+             - P[h, t] / sb for h in range(H)], 0.0)
         p_lo.value = np.maximum(
             [P[h, t] / sb + S.HUBS[h].bess_kw / sb for h in range(H)], 0.0)
         try:
@@ -276,9 +305,10 @@ def envelope_joint(d, P, u, flow, vmin=None, weights=None, verbose=False):
     RP *= sb; RM *= sb
     pmax = P + RP
     for h in range(H):
-        pmax[h] = np.minimum(pmax[h], S.HUBS[h].p_pcc_kw - d["netload15"][h])
+        pmax[h] = np.minimum(pmax[h],
+                             S.HUBS[h].p_pcc_kw - d["netload15"][h, t0:])
     if verbose:
-        print(f"  joint envelope: {time.perf_counter()-t0:.1f} s, "
+        print(f"  joint envelope: {time.perf_counter()-_tic:.1f} s, "
               f"mean up-margin {RP.mean():.0f} kW, min {RP.min():.0f} kW",
               flush=True)
     return np.maximum(pmax, 0.0), RP, RM
@@ -298,3 +328,49 @@ def verify_envelope(d, pmax, vmin=None):
                 s_ok=bool((fl <= lim + 1e-7).all()),
                 sub_ok=bool((fl[0] <= S.SUB_MVA * 1000 / S.S_BASE_KVA * 0.93
                              + 1e-7).all()))
+
+
+# --------------------------------------------- AC-corrected coordination ----
+def ac_voltage_15(d, P_kw, t0=0):
+    """Nonlinear AC squared voltage at the planned 15-min hub dispatch."""
+    H = len(S.HUBS)
+    P = d["exo"]["P_feeder"].reshape(S.N_BUS, S.T_DAY, 15).mean(2)[:, t0:].copy()
+    Q = d["exo"]["Q_feeder"].reshape(S.N_BUS, S.T_DAY, 15).mean(2)[:, t0:].copy()
+    for h in range(H):
+        P[S.HUBS[h].bus - 1] += P_kw[h]
+    return d["feeder"].solve(P, Q)["Vm"] ** 2
+
+
+def coordinate_ac(d, t0=0, soc0=None, bess0=0.5, band=None, n_corr=2,
+                  verbose=False):
+    """Coordination with a LinDistFlow-to-AC correction loop.
+
+    LinDistFlow drops the loss terms and so over-predicts voltage, and the
+    error grows with feeder loading -- a fixed security band sized at one
+    operating point is therefore not a safe de-rating at another. Instead the
+    upper level is re-solved with an additive correction
+
+        u_corr = u_AC(P) - u_LinDistFlow(P)
+
+    evaluated at its own previous dispatch. Two passes are enough: the
+    correction is a smooth function of loading, so the fixed point is reached
+    almost immediately, and each pass costs one power-flow solve (~15 ms).
+    """
+    u_corr = None
+    for i in range(n_corr + 1):
+        a = admm_qp(d, rho=1.2e-2, iters=60, eps_abs=0.02, verbose=False,
+                    t0=t0, soc0=soc0, bess0=bess0, vmin=band, u_corr=u_corr)
+        u_ac = ac_voltage_15(d, a["P"] + a["curt"], t0=t0)
+        u_ld = d["net"].u0[:, t0:] - d["net"].Mu @ (
+            (a["P"] + a["curt"]) / S.S_BASE_KVA)
+        new = u_ac - u_ld
+        gap = float(np.abs(new if u_corr is None else new - u_corr).max())
+        u_corr = new if u_corr is None else 0.7 * new + 0.3 * u_corr
+        if verbose:
+            print(f"    AC correction pass {i}: max |du| = {gap:.5f} p.u.^2, "
+                  f"worst AC voltage {np.sqrt(u_ac.min()):.4f}", flush=True)
+        if gap < 1e-5:
+            break
+    a["u_corr"] = u_corr
+    a["u"] = a["u"] + u_corr          # certify the envelope on corrected model
+    return a
