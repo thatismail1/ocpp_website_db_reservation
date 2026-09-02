@@ -113,6 +113,15 @@ HUBS = [
     Hub("C  Interchange",    22, 1, 150.0,  600.0, 120.0, 150.0),
     Hub("D  Central Depot",  25, 4, 150.0, 1200.0, 400.0, 260.0, 600.0, 300.0),
 ]
+# Hub placement is configurable: whether hubs COMPETE for shared network
+# capacity (same lateral) or are electrically near-independent (separate
+# laterals) turns out to decide whether fleet-aware allocation beats a
+# connection-specific one.
+_hb = os.environ.get("HUB_BUSES")
+if _hb:
+    for _h, _b in zip(HUBS, [int(x) for x in _hb.split(",")]):
+        _h.bus = _b
+
 HUB_IDX = {h.name[0]: i for i, h in enumerate(HUBS)}
 
 # ------------------------------------------------------------- time grid ----
