@@ -15,8 +15,10 @@ COUPLING = {17: 0.934, 16: 0.817, 14: 0.696, 12: 0.515,
             8: 0.276, 4: 0.086, 22: 0.008}      # R_shared / R_AA
 FN = "dist_sweep.json"
 res = json.load(open(FN)) if os.path.exists(FN) else {}
-ARMS = [("DOE-fair", "CDOE", dict(DOE_FAIR="proportional", DOE_VMIN="0.955")),
-        ("DOE-eff", "CDOE", dict(DOE_FAIR="efficiency", DOE_VMIN="0.955")),
+ARMS = [("DOE-eff", "CDOE", dict(DOE_FAIR="efficiency", DOE_VMIN="0.955")),
+        ("DOE-fair", "CDOE", dict(DOE_FAIR="proportional", DOE_VMIN="0.955")),
+        ("DOE-a2", "CDOE", dict(DOE_FAIR="alpha2", DOE_VMIN="0.955")),
+        ("DOE-maxmin", "CDOE", dict(DOE_FAIR="maxmin", DOE_VMIN="0.955")),
         ("fleet-aware", "C2e", dict(BAND="0.95"))]
 ONLY = sys.argv[1:] if len(sys.argv) > 1 else None
 

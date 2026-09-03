@@ -417,7 +417,20 @@ def envelope_doe(d, vmin=None, fairness="proportional", verbose=False):
             FL <= p_lim, FL >= -p_lim,
             FL[0] <= S.SUB_MVA * 1000.0 / sb * 0.93,
             P <= pcc]
-    obj = cp.sum(cp.log(P + 1e-4)) if fairness == "proportional" else cp.sum(P)
+    # the standard alpha-fair family: alpha = 0 is maximum efficiency, alpha = 1
+    # proportional fairness, alpha -> infinity max-min. Testing the whole family
+    # matters because a claim about "connection-specific allocation" must not
+    # rest on one objective having been chosen badly.
+    if fairness == "proportional":          # alpha = 1
+        obj = cp.sum(cp.log(P + 1e-4))
+    elif fairness == "efficiency":          # alpha = 0
+        obj = cp.sum(P)
+    elif fairness == "alpha2":              # alpha = 2
+        obj = -cp.sum(cp.inv_pos(P + 1e-3))
+    elif fairness == "maxmin":              # alpha -> infinity
+        obj = cp.min(P)
+    else:
+        raise ValueError(f"unknown fairness objective {fairness!r}")
     prob = cp.Problem(cp.Maximize(obj), cons)
 
     out = np.zeros((H, Tn))
