@@ -1,0 +1,156 @@
+{
+ "32|DOE-eff": {
+  "bus": 32,
+  "arm": "DOE-eff",
+  "coupling": 0.949,
+  "V_min": 0.9548421177646266,
+  "uv": 0,
+  "deficit_kWh": 602.9307079665808,
+  "deficit_n": 47,
+  "charge": 5.83536956113761,
+  "wall": 175.045802008
+ },
+ "32|DOE-fair": {
+  "bus": 32,
+  "arm": "DOE-fair",
+  "coupling": 0.949,
+  "V_min": 0.9548421177646266,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 6.997406102330027,
+  "wall": 173.42743513999994
+ },
+ "30|DOE-eff": {
+  "bus": 30,
+  "arm": "DOE-eff",
+  "coupling": 0.755,
+  "V_min": 0.9548859080529839,
+  "uv": 0,
+  "deficit_kWh": 20.047950809379568,
+  "deficit_n": 3,
+  "charge": 6.5562347549737705,
+  "wall": 174.08482736800033
+ },
+ "30|DOE-fair": {
+  "bus": 30,
+  "arm": "DOE-fair",
+  "coupling": 0.755,
+  "V_min": 0.9548859080529839,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 6.964876898444345,
+  "wall": 180.39234978700006
+ },
+ "28|DOE-eff": {
+  "bus": 28,
+  "arm": "DOE-eff",
+  "coupling": 0.557,
+  "V_min": 0.9549369973126178,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 6.856300366200686,
+  "wall": 181.680684466
+ },
+ "28|DOE-fair": {
+  "bus": 28,
+  "arm": "DOE-fair",
+  "coupling": 0.557,
+  "V_min": 0.9549369973126178,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 6.975867532973018,
+  "wall": 177.04409847299985
+ },
+ "27|DOE-eff": {
+  "bus": 27,
+  "arm": "DOE-eff",
+  "coupling": 0.398,
+  "V_min": 0.9549830534087589,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.190245471399203,
+  "wall": 176.41866619899974
+ },
+ "27|DOE-fair": {
+  "bus": 27,
+  "arm": "DOE-fair",
+  "coupling": 0.398,
+  "V_min": 0.9543385414127368,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.337976761065342,
+  "wall": 175.16190231600012
+ },
+ "26|DOE-eff": {
+  "bus": 26,
+  "arm": "DOE-eff",
+  "coupling": 0.355,
+  "V_min": 0.954978995584412,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.303454133500685,
+  "wall": 176.24053389999972
+ },
+ "26|DOE-fair": {
+  "bus": 26,
+  "arm": "DOE-fair",
+  "coupling": 0.355,
+  "V_min": 0.9540327075206891,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.47031739259443,
+  "wall": 175.95929959400019
+ },
+ "22|DOE-eff": {
+  "bus": 22,
+  "arm": "DOE-eff",
+  "coupling": 0.014,
+  "V_min": 0.9566018509892555,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.648121022570778,
+  "wall": 176.79007819700018
+ },
+ "22|DOE-fair": {
+  "bus": 22,
+  "arm": "DOE-fair",
+  "coupling": 0.014,
+  "V_min": 0.9533931292408765,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 8.72319860522045,
+  "wall": 173.6198049249997
+ },
+ "32|fleet-aware": {
+  "bus": 32,
+  "arm": "fleet-aware",
+  "coupling": 0.949,
+  "V_min": 0.9498720627901459,
+  "uv": 4,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 6.847800940546488,
+  "wall": 491.6570187970001
+ },
+ "22|fleet-aware": {
+  "bus": 22,
+  "arm": "fleet-aware",
+  "coupling": 0.014,
+  "V_min": 0.9502069918473105,
+  "uv": 0,
+  "deficit_kWh": 0.0,
+  "deficit_n": 0,
+  "charge": 7.650433902022328,
+  "wall": 527.1647387409994
+ }
+}
