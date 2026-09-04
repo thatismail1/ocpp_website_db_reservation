@@ -1,0 +1,400 @@
+<title>The Bus Charging Project, Explained</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F7F6F3; --panel:#FFFFFF; --panel2:#EFEEE9;
+  --ink:#191C1E; --ink2:#4A5157; --ink3:#767E85;
+  --rule:#D9D8D1; --rule2:#E7E6E0;
+  --grid:#0E5F6E; --hub:#9A5B0B;
+  --c0:#B4442F; --c1:#C08A1E; --c2:#2E7D8C; --c3:#2F6B45;
+  --good:#2F6B45; --warn:#C08A1E; --bad:#B4442F;
+  --gridline:#E7E6E0;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#14181A; --panel:#1B2023; --panel2:#212729;
+  --ink:#E9E9E4; --ink2:#B2B9BD; --ink3:#848C92;
+  --rule:#2E3639; --rule2:#252C2F;
+  --grid:#63C4D3; --hub:#E3A75C;
+  --c0:#E0765C; --c1:#E3B457; --c2:#63C4D3; --c3:#71B98C;
+  --good:#71B98C; --warn:#E3B457; --bad:#E0765C;
+  --gridline:#2A3134;
+}}
+:root[data-theme="dark"]{
+  --ground:#14181A; --panel:#1B2023; --panel2:#212729;
+  --ink:#E9E9E4; --ink2:#B2B9BD; --ink3:#848C92;
+  --rule:#2E3639; --rule2:#252C2F;
+  --grid:#63C4D3; --hub:#E3A75C;
+  --c0:#E0765C; --c1:#E3B457; --c2:#63C4D3; --c3:#71B98C;
+  --good:#71B98C; --warn:#E3B457; --bad:#E0765C;
+  --gridline:#2A3134;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);
+ font-family:"Source Sans 3","Segoe UI",Helvetica,Arial,sans-serif;
+ font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 26px 110px}
+.col{max-width:70ch}
+header.mast{border-bottom:1px solid var(--rule);padding:60px 0 28px;margin-bottom:38px}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.16em;
+ text-transform:uppercase;color:var(--ink3)}
+h1{font-family:"Newsreader",Georgia,serif;font-weight:600;
+ font-size:clamp(32px,5vw,52px);line-height:1.08;letter-spacing:-.015em;
+ margin:12px 0 0;max-width:20ch;text-wrap:balance}
+.dek{font-family:"Newsreader",Georgia,serif;font-size:19.5px;line-height:1.5;
+ color:var(--ink2);max-width:62ch;margin:16px 0 0}
+h2{font-family:"Newsreader",Georgia,serif;font-weight:600;font-size:28px;
+ line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h3{font-size:17px;font-weight:600;margin:30px 0 6px}
+.sec-no{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;
+ color:var(--grid);display:block;margin-bottom:9px}
+section{padding:32px 0 0}
+p{margin:0 0 14px}
+ul{margin:0 0 16px;padding-left:20px}li{margin:0 0 7px}
+hr.rule{border:0;border-top:1px solid var(--rule);margin:48px 0 0}
+code{font-family:"IBM Plex Mono",monospace;font-size:.87em;background:var(--panel2);
+ padding:1px 5px;border-radius:3px}
+a{color:var(--grid)}
+/* headline tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));
+ gap:12px;margin:26px 0 8px}
+.tile{background:var(--panel);border:1px solid var(--rule2);border-radius:5px;
+ padding:14px 16px;position:relative;overflow:hidden}
+.tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+ background:var(--good)}
+.tile .lab{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;
+ text-transform:uppercase;color:var(--ink3);display:block}
+.tile .val{font-family:"Newsreader",Georgia,serif;font-size:32px;line-height:1.1;
+ margin-top:5px;font-variant-numeric:tabular-nums}
+.tile .sub{font-size:13.5px;color:var(--ink2);margin-top:3px}
+/* charts */
+.figure{background:var(--panel);border:1px solid var(--rule2);border-radius:6px;
+ padding:16px 18px 10px;margin:22px 0}
+.figure h4{margin:0 0 2px;font-size:15.5px;font-weight:600}
+.figure .cap{font-size:14px;color:var(--ink2);margin:0 0 8px;max-width:76ch}
+.chwrap{overflow-x:auto}
+svg.ch{display:block;min-width:620px;width:100%;height:auto}
+svg.ch.sm{min-width:0}
+.panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.panel h5{margin:0 0 2px;font-size:13px;font-weight:600}
+.panel p{font-size:12.5px;color:var(--ink3);margin:0 0 4px}
+.grid{stroke:var(--gridline);stroke-width:1}
+.lim{stroke:var(--bad);stroke-width:1;stroke-dasharray:4 3}
+.lim-t{fill:var(--bad);font-family:"IBM Plex Mono",monospace;font-size:10px}
+.tk{fill:var(--ink3);font-family:"IBM Plex Mono",monospace;font-size:10.5px}
+.ax{fill:var(--ink3);font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+ letter-spacing:.06em}
+.lg{display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0 2px;
+ font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink2)}
+.lgi{display:inline-flex;align-items:center;gap:6px}
+.lgi i{width:14px;height:2.5px;border-radius:2px;display:inline-block}
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--rule2);border-radius:6px;
+ background:var(--panel);margin:22px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:680px}
+th,td{text-align:left;padding:8px 13px;border-bottom:1px solid var(--rule2)}
+thead th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.09em;
+ text-transform:uppercase;color:var(--ink3);font-weight:600;background:var(--panel2);
+ border-bottom:1px solid var(--rule)}
+.win{color:var(--c3)}
+tr.hot td{background:color-mix(in srgb, var(--c0) 9%, transparent)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;
+ font-family:"IBM Plex Mono",monospace;font-size:13px;white-space:nowrap}
+td.unit{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink3)}
+tr.grp td{background:var(--panel2);font-family:"IBM Plex Mono",monospace;font-size:11px;
+ letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+tbody tr:last-child td{border-bottom:0}
+thead th.c2b{color:var(--c3)}
+.note{background:var(--panel);border:1px solid var(--rule2);border-radius:5px;
+ padding:15px 18px;margin:20px 0;font-size:15.5px;color:var(--ink2)}
+.note b{color:var(--ink)}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--rule);
+ font-size:14px;color:var(--ink3);max-width:72ch}
+::selection{background:var(--panel2)}
+:focus-visible{outline:2px solid var(--grid);outline-offset:2px}
+@media(max-width:640px){body{font-size:16px}.wrap{padding:0 16px 70px}}
+</style>
+
+<style>
+.toc{background:var(--panel);border:1px solid var(--rule2);border-radius:6px;
+ padding:18px 22px;margin:26px 0}
+.toc ol{margin:0;padding-left:20px;columns:2;column-gap:32px}
+.toc li{margin:0 0 6px;break-inside:avoid}
+.toc a{text-decoration:none}
+.step{display:flex;gap:16px;margin:0 0 18px;align-items:baseline}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--grid);
+ min-width:26px;font-weight:600}
+.step .b{flex:1}
+.step h5{margin:0 0 3px;font-size:16px;font-weight:600}
+.step p{margin:0;font-size:15px;color:var(--ink2)}
+.mod{background:var(--panel);border:1px solid var(--rule2);border-radius:6px;
+ padding:18px 22px;margin:18px 0}
+.mod .hd{display:flex;justify-content:space-between;align-items:baseline;
+ gap:14px;flex-wrap:wrap;margin-bottom:4px}
+.mod .fn{font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;
+ color:var(--grid)}
+.mod .ln{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink3)}
+.mod .role{font-family:"Newsreader",Georgia,serif;font-size:17px;font-style:italic;
+ color:var(--ink2);margin:0 0 10px}
+.mod dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;
+ font-size:14.5px}
+.mod dt{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--hub);
+ white-space:nowrap}
+.mod dd{margin:0;color:var(--ink2)}
+.turn{border-left:3px solid var(--c0);background:var(--panel);padding:14px 20px;
+ margin:20px 0;border-radius:0 5px 5px 0}
+.turn h4{margin:0 0 5px;font-size:15.5px}
+.turn p{margin:0 0 8px;font-size:15px;color:var(--ink2)}
+.turn p:last-child{margin:0}
+.turn.good{border-left-color:var(--c3)}
+</style><div class="wrap">
+<header class="mast">
+  <span class="kicker">Project guide &nbsp;/&nbsp; plain language &nbsp;/&nbsp; September 2026</span>
+  <h1>The Bus Charging Project, Explained</h1>
+  <p class="dek">Everything we built, why we built it, what the code actually does line by line, and what we got wrong three times along the way. Written to be read start to finish by someone who has not been following the details.</p>
+</header>
+
+<div class="toc">
+<ol>
+<li><a href="#p1">The problem in plain words</a></li>
+<li><a href="#p2">What we built</a></li>
+<li><a href="#p3">The three times we were wrong</a></li>
+<li><a href="#p4">What the code is, file by file</a></li>
+<li><a href="#p5">How one experiment actually runs</a></li>
+<li><a href="#p6">What we know now</a></li>
+</ol>
+</div>
+
+<section id="p1">
+<span class="sec-no">Part 1</span>
+<h2>The problem in plain words</h2>
+<div class="col">
+<p>A city electrifies its buses. The buses charge in short bursts during their normal stops &mdash; a robot arm drops onto the roof at a terminal and pushes several hundred kilowatts into the battery for six or eight minutes. This is called <strong>opportunity charging</strong>, and it is how most electric bus fleets in Europe actually work, because it lets you use a smaller, cheaper battery.</p>
+
+<p>From the electricity network's point of view this is a difficult customer. A fast charger at a bus terminal is a very large load that switches on and off abruptly, several times an hour, at a fixed place. When a few of them fire at once the voltage at the far end of the feeder sags. Voltage sag is not an abstract problem &mdash; it is what makes other people's motors run hot and their equipment trip out. Networks have a legal band they must stay inside, usually within 5% of nominal.</p>
+
+<p>So there is a tension:</p>
+<ul>
+<li>The <strong>network operator</strong> wants the charging spread out, moved to quiet hours, kept away from the moments when the feeder is already loaded.</li>
+<li>The <strong>bus operator</strong> cannot move it. The bus is at the terminal for six minutes because the timetable says so. If it leaves without enough charge it cannot complete its route, and a bus that does not run is a service failure that passengers notice.</li>
+</ul>
+
+<p>Both are right, and neither can solve it alone. That is what this project is about.</p>
+
+<h3>The idea we started with</h3>
+<p>Split the decision into two levels that talk to each other.</p>
+
+<div class="step"><span class="n">Top</span><div class="b">
+<h5>The network operator, every 15 minutes</h5>
+<p>Looks at the whole feeder, works out how much power each charging site can safely draw right now, and sends each site two things: a <strong>power limit</strong> and a <strong>price</strong> that reflects the true cost of drawing power at that particular location, including the strain it causes.</p></div></div>
+
+<div class="step"><span class="n">Bottom</span><div class="b">
+<h5>Each charging site, every minute</h5>
+<p>Decides which bus gets how much power, staying under the limit, chasing the cheap moments, and never letting a bus miss its departure. It knows the timetable and it measures the real battery levels.</p></div></div>
+
+<p>The appeal of this split is that neither side has to know the other's business. The network operator does not need the timetable. The bus operator does not need a model of the feeder. They meet at a single number: how much power flows into each site.</p>
+</div>
+</section>
+
+<hr class="rule">
+
+<section id="p2">
+<span class="sec-no">Part 2</span>
+<h2>What we built</h2>
+<div class="col">
+<p>We did not stop at describing the idea. We built the whole thing as a working simulation, roughly 2,000 lines of Python, and ran a full day minute by minute.</p>
+
+<h3>The virtual city</h3>
+<ul>
+<li><strong>The grid:</strong> the IEEE 33-bus test feeder &mdash; a standard published network that power engineers use precisely so results can be compared between papers. 33 connection points, 32 cables, real published resistance values, 12.66 kV, a 5 MVA transformer at the top.</li>
+<li><strong>Four charging sites:</strong> two fast terminals (450 kW and 250 kW pantographs), one mid-route top-up point (150 kW), and an overnight depot with four plug-in bays and a big stationary battery.</li>
+<li><strong>Twelve to sixteen buses</strong> running a 110-minute loop for an 18-hour service day.</li>
+<li><strong>Solar panels and building loads</strong> at each site, and ordinary electricity demand at every other connection point on the feeder.</li>
+<li><strong>Real electricity prices</strong> that change hour by hour.</li>
+</ul>
+
+<p>The bus energy consumption is not a guess. We compute it from physics &mdash; mass, air resistance, rolling resistance, hills, and energy recovered by braking &mdash; over a stop-and-go speed trace. It comes out at 1.17 kWh per kilometre at an average 32 km/h, which is right for a real 14-tonne bus.</p>
+
+<h3>The one rule we kept throughout</h3>
+<p>Optimisation needs a simplified model of the grid, because the true equations are non-linear and slow. But <strong>we never judged a result using the simplified model.</strong> Every single case is scored by a full non-linear power-flow calculation at every one of the 1,440 minutes in the day. Otherwise you are marking your own homework, and you will be flattered by your own approximation. This turned out to matter enormously.</p>
+</div>
+</section>
+
+<hr class="rule">
+
+<section id="p3">
+<span class="sec-no">Part 3</span>
+<h2>The three times we were wrong</h2>
+<div class="col">
+<p>This is the most useful part of the story, and the part worth telling honestly in the paper. The project changed direction three times, each time because an experiment contradicted what we believed.</p>
+</div>
+
+<div class="turn">
+<h4>Correction 1 &mdash; the safety guarantee was not a guarantee</h4>
+<p>The first version worked out each site's power limit by asking: <em>if this one site increased its draw, when would something break?</em> One site at a time, holding the others fixed.</p>
+<p>That is not a guarantee. It says nothing about what happens if all four sites increase together. We checked: push every site to its own limit simultaneously and the voltage drops to 0.9339 &mdash; a clear violation of a limit that was supposed to prevent violations. The whole safety story rested on an assumption nobody had tested.</p>
+<p><strong>The fix:</strong> under the simplified grid model, more power always means lower voltage &mdash; the relationship never reverses. So if you check the worst corner of the box of possible power combinations, you have checked the entire box. We compute the largest safe box directly. Verified exact at 0.9500.</p>
+</div>
+
+<div class="turn">
+<h4>Correction 2 &mdash; we claimed things other people had already published</h4>
+<p>We then read the literature properly and found an entire field we had been reinventing: <strong>dynamic operating envelopes</strong>, mostly Australian, driven by their rooftop solar problem. Sending each connection point a safe, time-varying power limit is exactly what that field does, and has done for years.</p>
+<p>Three of our four claimed contributions were already published. The largest-safe-box construction is Liu &amp; Braslavsky in <em>IEEE Transactions on Power Systems</em> (2023). The finding that forecast error in <em>other people's</em> load is what breaks the limits, and that updating more often helps, is an AEMO Project EDGE field trial from 2023 with data from 47 real customer sites. Correcting the simplified grid model for its optimism is a developed literature of its own.</p>
+<p><strong>The fix:</strong> stop claiming them. Cite them, use them, and find out what is actually left.</p>
+</div>
+
+<div class="turn">
+<h4>Correction 3 &mdash; our own experiment refuted us, and then the refutation was also wrong</h4>
+<p>What seemed left was this: the existing field always assumes the flexible thing stays put. A house with a battery is bolted to its connection point. A bus is not &mdash; it drives between charging sites, so what one site can do depends on what happened at another site twenty minutes earlier. We believed a per-site limit could not handle that.</p>
+<p>So we tested it: we implemented the standard method faithfully, with no knowledge of the timetable at all, and let it run. <strong>It worked perfectly.</strong> Zero violations, zero missed departures, and it delivered more energy than our elaborate framework. Our contribution appeared to be worth nothing.</p>
+<p>Then we found the flaw &mdash; in the test, not the idea. Our four charging sites sat on four separate branches of the network. They barely interacted electrically, so of course a per-site limit was fine. We had accidentally built the easiest possible case.</p>
+</div>
+
+<div class="turn good">
+<h4>What survived</h4>
+<p>We moved two sites onto the <em>same</em> branch, so they genuinely compete for the same capacity, and swept how much network they share &mdash; from almost everything in common down to almost nothing &mdash; while holding every other variable fixed.</p>
+<p>The standard method degrades smoothly as the sites share more network, and fails once they share enough. Our fleet-aware method does not. And below the crossover the standard method is not just adequate but <em>better</em>, because our coordination is conservative and that conservatism costs energy throughput.</p>
+<p>That is a design rule rather than a sales pitch, and it is the honest result.</p>
+</div>
+</section>
+
+<hr class="rule">
+
+<section id="p4">
+<span class="sec-no">Part 4</span>
+<h2>What the code is, file by file</h2>
+<div class="col">
+<p>About 2,000 lines across eleven files. Six are the model; five are experiment harnesses. Here is what each one is for.</p>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">system.py</span><span class="ln">206 lines</span></div>
+<p class="role">The world. Everything that exists before anyone makes a decision.</p>
+<p>Holds the IEEE 33-bus network as published data &mdash; every cable's resistance and reactance, every connection point's load. Then builds the day: electricity prices hour by hour, solar output (a clear-sky curve multiplied by drifting cloud), building loads at each site, and ordinary demand everywhere else.</p>
+<dl>
+<dt>feeder_topology()</dt><dd>Turns the flat list of cables into a tree &mdash; works out which connection point feeds which, so we can trace the path from the substation to anywhere.</dd>
+<dt>path_resistance_matrix()</dt><dd>For any two points, how much cable resistance their two paths from the substation have <em>in common</em>. This one function produces the number on the horizontal axis of our main result. It is the measure of how much two charging sites compete.</dd>
+<dt>Hub</dt><dd>A charging site: which connection point, how many bays, how much power per bay, solar capacity, building load, and battery if it has one.</dd>
+<dt>build_exogenous()</dt><dd>Assembles all the day's fixed inputs into arrays.</dd>
+</dl>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">powerflow.py</span><span class="ln">47 lines</span></div>
+<p class="role">The referee. The only thing that decides whether a result is real.</p>
+<p>Solves the true non-linear physics of electricity flowing through the network, using a standard backward/forward sweep, for all 1,440 minutes at once. Every case in the project is scored by this, never by the approximation it was optimised against. The whole file takes 14 milliseconds to run a day. Small, and the most important 47 lines in the project.</p>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">transit.py</span><span class="ln">142 lines</span></div>
+<p class="role">The buses. Physics and timetable.</p>
+<dl>
+<dt>BusParams</dt><dd>A 14-tonne bus: mass, frontal area, drag coefficient, rolling resistance, gear ratio, motor and regeneration limits, efficiencies at every stage from battery to wheel.</dd>
+<dt>synthetic_urban_cycle()</dt><dd>Builds a realistic stop-and-go speed trace &mdash; accelerate, cruise, brake, wait at a stop, repeat &mdash; plus a gently rolling gradient.</dd>
+<dt>leg_energy_kwh()</dt><dd>The actual physics. At every second: force to accelerate, force to overcome rolling resistance, force against air, force against gravity on a slope. Force times speed is power. Divide by the efficiency chain going out, multiply by it coming back when braking recovers energy. Integrate over the trip. This is why our energy numbers are defensible rather than assumed.</dd>
+<dt>build_timetable()</dt><dd>A 110-minute loop: terminal A, drive, interchange C, drive, terminal B, drive, C again, back to A. Sixteen buses staggered so they do not all arrive together.</dd>
+<dt>availability(), departures()</dt><dd>Who is plugged in where and when; and how much charge each bus must have before each departure.</dd>
+</dl>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">coord.py</span><span class="ln">449 lines</span></div>
+<p class="role">The negotiation between the network and the fleet. The heart of the framework.</p>
+<dl>
+<dt>UpperLevel</dt><dd>The network operator's problem. Minimises the cost of electricity plus the energy wasted in cables plus voltage deviation, subject to keeping every connection point inside its voltage band and every cable inside its rating.</dd>
+<dt>FleetBlock</dt><dd>The bus operator's problem. Tracks every vehicle's charge through the day and insists every departure is met &mdash; but with a penalised slack, so an impossible situation produces the least-bad plan rather than a crash.</dd>
+<dt>admm_qp()</dt><dd>The negotiation itself. The two sides take turns proposing, and a price adjusts until they agree on how much power flows into each site. Converges in six rounds and about two seconds.</dd>
+<dt>envelope_joint()</dt><dd>The corrected safety guarantee from Correction 1. Finds the largest box of simultaneous power combinations that is provably safe.</dd>
+<dt>verify_envelope()</dt><dd>An independent check that deliberately does not trust the function above &mdash; it pushes every site to its limit at once and asks the grid model whether anything broke. This is what caught the original error.</dd>
+<dt>coordinate_ac()</dt><dd>The simplified grid model is optimistic, and increasingly so the more loaded the feeder is. This re-solves against a correction measured from the true physics at its own proposed answer. Two passes are enough.</dd>
+<dt>envelope_doe()</dt><dd><strong>The benchmark, and the most important function for the paper.</strong> The textbook method as an operator would run it today: per site, per interval, no timetable, no battery knowledge. Four fairness objectives &mdash; maximum efficiency, proportional, alpha-2, and max-min &mdash; so the comparison covers the whole standard family rather than one convenient choice.</dd>
+</dl>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">opt.py</span><span class="ln">341 lines</span></div>
+<p class="role">The site-level controller, plus first-generation code now partly superseded.</p>
+<dl>
+<dt>hub_mpc()</dt><dd>Still central. The minute-by-minute decision at one charging site, as a mixed-integer program: which bus is on which bay, how much power each gets, what the site battery does. Respects the dispatched limit, chases cheap moments, penalises battery wear and any shortfall against a departure. Solves in about 85 milliseconds.</dd>
+<dt>Network</dt><dd>Pre-computes the simplified grid relationships once, so the optimisers do not redo them thousands of times.</dd>
+<dt>upper_level(), fleet_lp()</dt><dd>The first-generation versions, kept for history. Superseded by the cleaner ones in coord.py.</dd>
+</dl>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">run.py</span><span class="ln">538 lines</span></div>
+<p class="role">The conductor. Assembles everything and runs the day.</p>
+<dl>
+<dt>setup()</dt><dd>Builds the world, the buses and the timetable, once.</dd>
+<dt>simulate()</dt><dd>The closed loop. Walks through the day, and at every step asks each site's controller what to do, applies it, updates every battery, and moves on. Supports four modes: dumb charging, price-only local control, static limits, and rolling coordination.</dd>
+<dt>evaluate()</dt><dd>Takes whatever happened and runs the true power flow over it, producing every number we report: minimum voltage, violations, losses, peak, cost, missed departures.</dd>
+<dt>perturb_forecast(), inflate_forecast()</dt><dd>Uncertainty. The first makes the operator plan on a wrong forecast while reality does something else; the second adds a safety margin to the forecast itself.</dd>
+<dt>stage_*()</dt><dd>Command-line entry points, so each experiment can run as its own process.</dd>
+</dl>
+</div>
+
+<div class="mod">
+<div class="hd"><span class="fn">sweep.py &nbsp;mc.py &nbsp;dist_sweep.py &nbsp;lat3_sweep.py &nbsp;report.py</span><span class="ln">336 lines</span></div>
+<p class="role">The experiments.</p>
+<dl>
+<dt>sweep.py</dt><dd>Varies solar penetration, fleet size and feeder loading.</dd>
+<dt>mc.py</dt><dd>Repeats the day with different forecast errors.</dd>
+<dt>dist_sweep.py</dt><dd><strong>The main experiment.</strong> Walks one charging site along a branch, changing only how much network it shares with another site, and records what each method does.</dd>
+<dt>lat3_sweep.py</dt><dd>The same experiment on a different branch of the network &mdash; the check that produced our most uncomfortable finding.</dd>
+<dt>report.py</dt><dd>Turns saved results into tables and chart data.</dd>
+</dl>
+</div>
+</section>
+
+<hr class="rule">
+
+<section id="p5">
+<span class="sec-no">Part 5</span>
+<h2>How one experiment actually runs</h2>
+<div class="col">
+<p>End to end, when you type <code>python3 run.py C2e</code>:</p>
+
+<div class="step"><span class="n">1</span><div class="b"><h5>Build the world</h5>
+<p>Load the network data. Simulate one bus trip through the physics model to get the energy per leg. Build the timetable and work out who is plugged in where at every minute. Generate the day's prices, solar and loads.</p></div></div>
+
+<div class="step"><span class="n">2</span><div class="b"><h5>Negotiate, on the hour</h5>
+<p>The network side and the fleet side trade proposals until they agree &mdash; six rounds, two seconds. Then the true physics is consulted, the simplified model is corrected for its optimism, and the negotiation is repeated. Twice is enough.</p></div></div>
+
+<div class="step"><span class="n">3</span><div class="b"><h5>Work out the safe box</h5>
+<p>Find the largest set of simultaneous power limits that is provably safe, and verify it independently by pushing everything to its corner.</p></div></div>
+
+<div class="step"><span class="n">4</span><div class="b"><h5>Run the next hour, minute by minute</h5>
+<p>Each site solves its own small problem, applies the first few minutes of the answer, measures what actually happened to the batteries, and solves again. About 730 of these small problems per day.</p></div></div>
+
+<div class="step"><span class="n">5</span><div class="b"><h5>Score it honestly</h5>
+<p>Feed the whole day's real power draws into the non-linear power flow. Report minimum voltage, every violation, losses, peak demand, cost, and every missed departure.</p></div></div>
+
+<p>The whole thing takes about three and a half minutes for one day.</p>
+</div>
+</section>
+
+<hr class="rule">
+
+<section id="p6">
+<span class="sec-no">Part 6</span>
+<h2>What we know now</h2>
+<div class="col">
+<p><strong>Uncoordinated charging genuinely breaks this feeder.</strong> 703 bus-minutes below the legal voltage limit, minimum 0.9162.</p>
+
+<p><strong>Both coordinated approaches fix that, when the sites are electrically independent.</strong> Zero violations, zero missed departures, and the simple per-site method delivers slightly more energy than our complicated one. If your charging sites sit on separate branches, do not buy a coordination platform.</p>
+
+<p><strong>When two sites share a branch, the picture changes &mdash; on a weak branch.</strong> Every member of the standard fairness family fails: the efficient objective starves the buses of up to 485 kWh a day, the fair objective leaves 161 bus-minutes of violation, and even the most conservative objective leaves 103. No setting achieves both. Our fleet-aware method holds zero violations across the whole range.</p>
+
+<p><strong>But on a stronger branch, half of that did not reproduce.</strong> No voltage violations at any sharing level. Only the maximum-efficiency objective failed, and only on service. The proportional-fair objective &mdash; which is what network operators actually use &mdash; was fine everywhere and marginally better than our method.</p>
+
+<p>So the honest conclusion is conditional, and it is worth stating exactly:</p>
+
+<div class="note"><b>Per-site power limits are insufficient when charging sites that compete for the same network capacity also sit on a branch that is already near its voltage limit.</b> Not wherever sites compete. Both conditions have to hold, and we have one example of each side.</div>
+
+<p>That is less than we hoped for twice, and more than we had after the refutation. It is also the kind of claim that survives a reviewer who checks it.</p>
+</div>
+</section>
+
+<footer>
+Companion to the formulation document and the results page. All code, data and the full history of the three corrections are in the repository; the commit messages record what each experiment was meant to show and what it actually showed.
+</footer>
+</div>
