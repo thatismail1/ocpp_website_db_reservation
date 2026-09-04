@@ -11,14 +11,26 @@ RES = {}
 def setup(seed=7):
     v, g = T.synthetic_urban_cycle(T.LEG_MIN * 60)
     leg, dist = T.leg_energy_kwh(v, g)
+    # CORRELATED=1 makes leg energy depend on departure time through ridership,
+    # congestion and (with WINTER=1) heating. CORRELATED=0 uses the
+    # service-hours mean of exactly the same model, so the two variants deliver
+    # essentially the same daily energy and differ only in its timing.
+    if os.environ.get("CORRELATED") is not None:
+        import correlate as C
+        cd = C.CorrelatedDemand(winter=bool(os.environ.get("WINTER")))
+        leg = cd.leg_kwh if os.environ["CORRELATED"] == "1" else cd.mean_leg_kwh()
+        d_cd = cd
+    else:
+        d_cd = None
     events, cycle = T.build_timetable(leg)
     av = T.availability(events)
-    edrv = T.drive_energy(events, leg)
+    edrv = T.drive_energy(events)
     deps = T.departures(events)
     exo = S.build_exogenous(seed=seed)
     feeder = PF.Feeder()
     net = opt.Network(feeder, exo)
-    d = dict(leg_kwh=leg, leg_km=dist, cycle=cycle, av=av, edrv=edrv,
+    d = dict(leg_kwh=(leg if not callable(leg) else d_cd.mean_leg_kwh()),
+             leg_km=dist, cycle=cycle, av=av, edrv=edrv, cd=d_cd,
              deps=deps, exo=exo, feeder=feeder, net=net,
              netload=exo["load_hub"] - exo["pv_hub"])
     d["av15"] = av.reshape(4, T.N_VEH, S.T_DAY, 15).mean(3)
@@ -224,6 +236,9 @@ def evaluate(d, sim, label):
         defs.append(max(0.0, need - sim["soc"][b, dm]))
     defs = np.array(defs)
     hub_import = d["netload"] + ctrl
+    # coincidence between fleet charging demand and the rest of the feeder
+    import correlate as _C
+    coin = _C.coincidence_metrics(ctrl.sum(0), exo["P_feeder"].sum(0))
     # did the hubs actually respect the dispatched envelope?
     pm1 = sim.get("pmax1")
     if pm1 is not None:
@@ -264,6 +279,12 @@ def evaluate(d, sim, label):
         env_excess_max_kW=float(exc.max()),
         env_excess_kWh=float(exc.sum() / 60.0),
         env_breach_min=int((exc.max(0) > 1.0).sum()),
+        coin_contribution=coin["contribution_at_system_peak"],
+        coin_factor=coin["coincidence_factor"],
+        coin_corr=coin["correlation"],
+        hour_bus_peak=coin["hour_bus_peak"],
+        hour_sys_peak=coin["hour_system_peak"],
+        system_peak_kW=coin["system_peak_kW"],
         n_solves=int(len(sim["tsolve"])),
         t_mean_ms=float(sim["tsolve"].mean() * 1000) if len(sim["tsolve"]) else 0.0,
         t_max_ms=float(sim["tsolve"].max() * 1000) if len(sim["tsolve"]) else 0.0,

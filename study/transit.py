@@ -83,8 +83,15 @@ class Event:
     e_next: float     # energy of the leg that follows this dwell [kWh]
 
 
-def build_timetable(leg_kwh: float):
-    """Cycle  A -(leg)- C -(leg)- B -(leg)- C -(leg)- A , staggered fleet."""
+def build_timetable(leg_kwh):
+    """Cycle  A -(leg)- C -(leg)- B -(leg)- C -(leg)- A , staggered fleet.
+
+    `leg_kwh` is either a constant (the independent model: one average energy
+    per leg, as a study fitting kWh/km to fleet data would use) or a callable
+    of the departure minute (the correlated model: a trip leaving in the
+    evening peak carries more passengers through worse traffic and costs more).
+    """
+    leg_fn = leg_kwh if callable(leg_kwh) else (lambda m: float(leg_kwh))
     seq = [("A", DWELL["A"]), ("C", DWELL["C"]), ("B", DWELL["B"]), ("C", DWELL["C"])]
     cycle = sum(d for _, d in seq) + 4 * LEG_MIN            # 110 min
     events: List[Event] = []
@@ -101,7 +108,7 @@ def build_timetable(leg_kwh: float):
             arr, dep = t, t + dw
             if dep > SERVICE_END:
                 break
-            events.append(Event(b, h, arr, dep, leg_kwh))
+            events.append(Event(b, h, arr, dep, leg_fn(dep)))
             t = dep + LEG_MIN
             i += 1
         # depot dwells: pre-service (00:00 -> pull-out) and post-service
@@ -118,8 +125,12 @@ def availability(events, K=S.K_DAY, nh=len(S.HUBS), nv=N_VEH):
     return a
 
 
-def drive_energy(events, leg_kwh, K=S.K_DAY, nv=N_VEH):
-    """E_drv[b,k] kWh consumed by traction, spread over the driving minutes."""
+def drive_energy(events, leg_kwh=None, K=S.K_DAY, nv=N_VEH):
+    """E_drv[b,k] kWh consumed by traction, spread over the driving minutes.
+
+    Each leg carries the energy stored on the event that precedes it, so a
+    time-varying leg energy flows through unchanged.
+    """
     E = np.zeros((nv, K))
     by_veh = {}
     for e in events:
@@ -129,7 +140,7 @@ def drive_energy(events, leg_kwh, K=S.K_DAY, nv=N_VEH):
         for e1, e2 in zip(evs[:-1], evs[1:]):
             n = e2.arr - e1.dep
             if 0 < n <= 4 * LEG_MIN:
-                E[b, e1.dep:e2.arr] += leg_kwh / n
+                E[b, e1.dep:e2.arr] += e1.e_next / n
     return E
 
 
