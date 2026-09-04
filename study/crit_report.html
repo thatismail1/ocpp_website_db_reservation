@@ -1,0 +1,325 @@
+<title>Envelope Failure Criterion</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F2F3F5; --panel:#FFFFFF; --ink:#171A1F; --ink2:#4A5058; --ink3:#767E88;
+  --rule:#D8DCE1; --rule2:#E9ECEF;
+  --accent:#1F4FA8; --bad:#A8341F; --warn:#8A6A14; --good:#1D6349;
+  --codebg:#EDEFF2;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#111417; --panel:#181C21; --ink:#E7EAEE; --ink2:#AAB2BC; --ink3:#7C858F;
+    --rule:#2B3138; --rule2:#232930;
+    --accent:#7BA6F0; --bad:#E8836C; --warn:#D8B14E; --good:#5FBE97;
+    --codebg:#1E242A;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#111417; --panel:#181C21; --ink:#E7EAEE; --ink2:#AAB2BC; --ink3:#7C858F;
+  --rule:#2B3138; --rule2:#232930;
+  --accent:#7BA6F0; --bad:#E8836C; --warn:#D8B14E; --good:#5FBE97;
+  --codebg:#1E242A;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:0 24px 96px}
+.col{max-width:66ch}
+h1,h2,h3{font-family:"IBM Plex Serif","Iowan Old Style",Georgia,serif;text-wrap:balance;line-height:1.22;margin:0}
+h1{font-size:2.35rem;font-weight:600;letter-spacing:-.015em}
+h2{font-size:1.42rem;font-weight:600;margin-top:2.6rem}
+h3{font-size:1.06rem;font-weight:600;margin-top:1.8rem;font-family:"IBM Plex Sans",sans-serif}
+p{margin:.85rem 0}
+a{color:var(--accent)}
+.eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink3)}
+header{padding:64px 0 28px;border-bottom:1px solid var(--rule)}
+header .sub{color:var(--ink2);font-size:1.06rem;max-width:60ch;margin-top:.9rem}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:22px;
+  font-family:"IBM Plex Mono",monospace;font-size:.76rem;color:var(--ink3)}
+section{border-top:1px solid var(--rule2);padding-top:6px}
+section:first-of-type{border-top:none}
+.snum{font-family:"IBM Plex Mono",monospace;font-size:.78rem;color:var(--accent);letter-spacing:.08em}
+.eq{background:var(--codebg);border-left:2px solid var(--accent);padding:14px 18px;margin:1.2rem 0;
+  font-family:"IBM Plex Mono",monospace;font-size:.83rem;line-height:1.75;overflow-x:auto;white-space:pre}
+pre{background:var(--codebg);padding:14px 18px;overflow-x:auto;
+  font-family:"IBM Plex Mono",monospace;font-size:.78rem;line-height:1.6;border-radius:2px}
+code{font-family:"IBM Plex Mono",monospace;font-size:.88em;background:var(--codebg);padding:1px 4px}
+pre code{background:none;padding:0}
+ol.asm{list-style:none;padding:0;margin:1rem 0;display:grid;gap:.5rem}
+ol.asm li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:baseline}
+ol.asm b{font-family:"IBM Plex Mono",monospace;font-size:.8rem;color:var(--accent);font-weight:500}
+.tw{overflow-x:auto;margin:1.3rem 0}
+table{border-collapse:collapse;width:100%;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:7px 12px;border-bottom:1px solid var(--rule2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);border-bottom:1px solid var(--rule)}
+tbody tr:hover{background:var(--codebg)}
+td.bad{color:var(--bad)} td.good{color:var(--good)}
+figure{margin:2rem 0;background:var(--panel);border:1px solid var(--rule2);padding:18px 16px 12px}
+figcaption{font-size:.82rem;color:var(--ink2);margin-top:10px;padding:0 6px;max-width:70ch}
+figcaption b{color:var(--ink);font-weight:600}
+.ch{width:100%;height:auto;display:block}
+.ch .grid{stroke:var(--rule);stroke-width:1}
+.ch .tk,.ch .ax{fill:var(--ink3);font-family:"IBM Plex Mono",monospace;font-size:10px}
+.ch .ax{fill:var(--ink2);font-size:11px}
+.lg{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 6px 2px;font-size:.76rem;color:var(--ink2)}
+.lgi{display:inline-flex;align-items:center;gap:6px}
+.lgi i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.note{border-left:2px solid var(--warn);padding:2px 0 2px 16px;margin:1.4rem 0;color:var(--ink2);font-size:.93rem}
+.note strong{color:var(--ink)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;background:var(--rule2);
+  border:1px solid var(--rule2);margin:1.6rem 0}
+.kpi{background:var(--panel);padding:14px 16px}
+.kpi .v{font-family:"IBM Plex Mono",monospace;font-size:1.5rem;font-weight:500;letter-spacing:-.02em}
+.kpi .l{font-size:.78rem;color:var(--ink2);margin-top:2px}
+footer{margin-top:3.5rem;padding-top:18px;border-top:1px solid var(--rule);font-size:.8rem;color:var(--ink3)}
+::selection{background:var(--accent);color:var(--ground)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){h1{font-size:1.8rem}.wrap{padding:0 16px 64px}}
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Distribution planning &middot; derivation and validation</div>
+  <h1>When per-site operating envelopes fail under mobile shared load</h1>
+  <p class="sub">A closed-form condition, computable from feeder topology and fleet caps alone,
+  for whether connection-point envelopes allocated on a linearised power-flow model stay secure
+  in the exact AC solution &mdash; validated on 60 synthetic radial feeders with IEEE&nbsp;33-bus
+  held out as a genuine test case.</p>
+  <div class="meta">
+    <span>4&#8239;675 allocations</span><span>61 topologies</span>
+    <span>AC referee: backward/forward sweep</span><span>no threshold fitted</span>
+  </div>
+</header>
+
+<div class="col">
+
+<section>
+<div class="snum">01</div>
+<h2>The mechanism, stated before it is measured</h2>
+<p>Two failure modes are routinely conflated in discussions of dynamic operating envelopes (DOEs).
+They have different magnitudes, different dependence on topology, and different fixes, so they are
+kept separate throughout.</p>
+
+<h3>Mode A &mdash; naive one-at-a-time allocation</h3>
+<p>Each site's headroom is computed by perturbing that site alone, holding the others at base. The
+resulting box is <em>not</em> jointly feasible: every site can sit at its own cap simultaneously.
+This is not what the DOE literature does &mdash; joint feasibility is the defining property of a
+DOE &mdash; but it is what a practitioner reading raw sensitivity factors off a load-flow tool will
+produce, so it is measured rather than assumed away.</p>
+
+<h3>Mode B &mdash; correctly allocated joint envelopes that still violate in AC</h3>
+<p>A joint LP on LinDistFlow is secure <em>in the linear model</em>. LinDistFlow drops the loss
+terms, so it over-predicts voltage; a maximal allocation sits exactly on the linear boundary, which
+is where that error is largest. Every violation observed in the correctly-allocated case in this
+project comes from this, and it is what the criterion below predicts.</p>
+
+<h3>Assumptions</h3>
+<ol class="asm">
+  <li><b>A1</b><span>Radial network, single feed at bus&nbsp;0 held at V<sub>ref</sub>.</span></li>
+  <li><b>A2</b><span>LinDistFlow: u<sub>i</sub> = V<sub>ref</sub>&sup2; &minus; 2&#8721;<sub>j</sub>(R<sub>ij</sub>p<sub>j</sub> + X<sub>ij</sub>q<sub>j</sub>), with R<sub>ij</sub> the resistance shared by the root-to-i and root-to-j paths. R&nbsp;&ge;&nbsp;0 elementwise, so u is monotone decreasing in every injection &mdash; the property that makes corner certification of a box valid.</span></li>
+  <li><b>A3</b><span>Reactive injections exogenous; no reactive control at the hubs.</span></li>
+  <li><b>A4</b><span>Losses small relative to flows, so a single correction step suffices.</span></li>
+</ol>
+
+<h3>Result</h3>
+<p>Exact DistFlow differs from A2 in two ways: branch flows carry the losses of everything
+downstream, and there is a +(r&sup2;+x&sup2;)&#8467; term. The first dominates. Writing L<sub>ij</sub>
+for the loss generated downstream of branch (i,j), the additional squared-voltage drop at bus m
+relative to LinDistFlow is</p>
+<div class="eq">D_err(m)  =  2 &#8721;_{(i,j) &#8712; path(m)} r_ij L_ij ,
+L_ij      =  &#8721;_{(k,l) downstream} r_kl (P_kl&sup2; + Q_kl&sup2;) / u</div>
+<p>Collapsing the path sum onto the shared and exclusive segments of two hubs A and B &mdash; with
+R<sub>AA</sub> the resistance of A's own path, R<sub>AB</sub> the resistance shared with B, and
+<b>&rho; = R<sub>AB</sub>/R<sub>AA</sub></b> the <em>shared-resistance fraction</em> &mdash; gives</p>
+<div class="eq">D_err(A) &#8776; (2/V_ref&sup2;) R_AA&sup2; [ &#961;&sup2; S_shared&sup2; + (1&minus;&#961;)&sup2; S_excl&sup2; ]</div>
+<p>S<sub>shared</sub> carries the <em>sum</em> of both hubs' draws plus the base flow through the
+shared segment; S<sub>excl</sub> carries only hub A's. So &rho; enters twice: it weights the shared
+term, and the shared term itself grows as (P<sub>A</sub>+P<sub>B</sub>)&sup2;. That is why sharing
+hurts superlinearly, and why two hubs on separate laterals do not interact even at high individual
+loading.</p>
+</section>
+
+<section>
+<div class="snum">02</div>
+<h2>The checkable inequality</h2>
+<p>An allocation planned on LinDistFlow against a de-rated floor V<sub>plan</sub> is AC-insecure at
+bus m when the neglected loss drop exceeds the planning band:</p>
+<div class="eq">&#923;(m)  =  D_err(m) / ( V_plan&sup2; &minus; V_min&sup2; )   &gt;  1</div>
+<p>Every quantity on the right is available before any simulation: R and X from the topology,
+S from the base-case flows and the allocated caps, and the band from the planning policy.
+&#923;&nbsp;&le;&nbsp;1 predicts security. Equivalently, the minimum safe band is
+D_err(m) itself &mdash; the curves in Figure&nbsp;2.</p>
+
+<h3>Where the mobility constant &tau; goes</h3>
+<p>&tau; is the time for dispatch at one hub to affect state at another (travel plus dwell).
+It does not appear above, and that is a result rather than an omission: the voltage constraint is
+instantaneous and electrical, so the <em>timing</em> of energy demand cannot enter it. &tau; governs
+energy feasibility &mdash; whether the fleet can meet its departures &mdash; not network security.
+This is also why the validation does not sweep fleet size: fleet size moves S through the caps,
+which is already an argument of the criterion, and moves &tau;, which the criterion says is
+irrelevant to voltage.</p>
+<p>As &tau;&nbsp;&rarr;&nbsp;0 the hubs become a single connection point: R<sub>AB</sub>&nbsp;&rarr;&nbsp;R<sub>AA</sub>,
+&rho;&nbsp;&rarr;&nbsp;1, S<sub>excl</sub>&nbsp;&rarr;&nbsp;0, and &#923; collapses to</p>
+<div class="eq">2 R&sup2; S&sup2; / V_ref&sup2;  &gt;  band</div>
+<p>which is the ordinary stationary-DER envelope safety condition. The mobile case is a
+generalisation of the stationary one, not a departure from it.</p>
+</section>
+
+<section>
+<div class="snum">03</div>
+<h2>Validation</h2>
+<p>Derivation set: 60 randomly generated radial feeders (branch impedances, load placement and
+lateral structure varied), crossed with five &rho; targets, three baseline margins and three
+planning bands. Test set: the published IEEE 33-bus feeder, <em>not</em> used in deriving or tuning
+anything. For every allocation, the caps are certified on LinDistFlow and then evaluated by a
+backward/forward sweep AC solve &mdash; the discipline of never scoring on the model that was
+optimised against is preserved throughout.</p>
+
+<div class="kpis">
+  <div class="kpi"><div class="v">2.000</div><div class="l">median naive/joint cap ratio, two hubs &mdash; the derivation predicts exactly 2</div></div>
+  <div class="kpi"><div class="v">0.0118</div><div class="l">median AC violation depth, naive allocation with a 0.005 band (p.u.)</div></div>
+  <div class="kpi"><div class="v">0 / 1350</div><div class="l">joint allocations violating at a static operating point once a band &ge; 0.005 exists</div></div>
+</div>
+
+<div class="tw">
+<table>
+<thead><tr><th>Set</th><th>Mode</th><th>Band</th><th>n</th><th>Violated</th><th>Median depth</th><th>Max depth</th><th>&#923;&gt;1 correct</th></tr></thead>
+<tbody>
+<tr><td>synthetic</td><td>naive</td><td>0.000</td><td>810</td><td class="bad">98.4%</td><td>0.0186</td><td>0.0407</td><td>797/810</td></tr>
+<tr><td>synthetic</td><td>naive</td><td>0.005</td><td>810</td><td class="bad">98.4%</td><td>0.0111</td><td>0.0276</td><td>0/797 missed</td></tr>
+<tr><td>synthetic</td><td>naive</td><td>0.010</td><td>810</td><td class="bad">57.2%</td><td>0.0019</td><td>0.0149</td><td>0/463 missed</td></tr>
+<tr><td>synthetic</td><td>joint</td><td>0.000</td><td>810</td><td class="bad">98.4%</td><td>0.0035</td><td>0.0049</td><td>797/810</td></tr>
+<tr><td>synthetic</td><td>joint</td><td>0.005</td><td>810</td><td class="good">0.0%</td><td>&mdash;</td><td>&mdash;</td><td>810 TN</td></tr>
+<tr><td>synthetic</td><td>joint</td><td>0.010</td><td>540</td><td class="good">0.0%</td><td>&mdash;</td><td>&mdash;</td><td>540 TN</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>naive</td><td>0.000</td><td>15</td><td class="bad">100%</td><td>0.0168</td><td>0.0339</td><td>15/15</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>naive</td><td>0.005</td><td>15</td><td class="bad">100%</td><td>0.0107</td><td>0.0222</td><td>0/15 missed</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>naive</td><td>0.010</td><td>15</td><td class="bad">33.3%</td><td>0.0105</td><td>0.0107</td><td>0/5 missed</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>joint</td><td>0.000</td><td>15</td><td class="bad">100%</td><td>0.0031</td><td>0.0033</td><td>15/15</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>joint</td><td>0.005</td><td>15</td><td class="good">0.0%</td><td>&mdash;</td><td>&mdash;</td><td>15 TN</td></tr>
+<tr><td>IEEE 33 <em>(held out)</em></td><td>joint</td><td>0.010</td><td>10</td><td class="good">0.0%</td><td>&mdash;</td><td>&mdash;</td><td>10 TN</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+<svg viewBox="0 0 650 306" class="ch" role="img"><line class="grid" x1="64" y1="266.0" x2="624" y2="266.0"/><text class="tk" x="56" y="269.5" text-anchor="end">0.000</text><line class="grid" x1="64" y1="216.0" x2="624" y2="216.0"/><text class="tk" x="56" y="219.5" text-anchor="end">0.005</text><line class="grid" x1="64" y1="166.0" x2="624" y2="166.0"/><text class="tk" x="56" y="169.5" text-anchor="end">0.010</text><line class="grid" x1="64" y1="116.0" x2="624" y2="116.0"/><text class="tk" x="56" y="119.5" text-anchor="end">0.015</text><line class="grid" x1="64" y1="66.0" x2="624" y2="66.0"/><text class="tk" x="56" y="69.5" text-anchor="end">0.020</text><line class="grid" x1="64" y1="16.0" x2="624" y2="16.0"/><text class="tk" x="56" y="19.5" text-anchor="end">0.025</text><text class="tk" x="64.0" y="284" text-anchor="middle">0</text><text class="tk" x="176.0" y="284" text-anchor="middle">0.2</text><text class="tk" x="288.0" y="284" text-anchor="middle">0.4</text><text class="tk" x="400.0" y="284" text-anchor="middle">0.6</text><text class="tk" x="512.0" y="284" text-anchor="middle">0.8</text><text class="tk" x="624.0" y="284" text-anchor="middle">1</text><path d="M148.0,158.2 L204.0,136.4 L260.0,113.8 L372.0,39.6 L484.0,36.2 L596.0,34.9" fill="none" stroke="#B4442F" stroke-width="2"/><circle cx="148.0" cy="158.2" r="3" fill="#B4442F"/><circle cx="204.0" cy="136.4" r="3" fill="#B4442F"/><circle cx="260.0" cy="113.8" r="3" fill="#B4442F"/><circle cx="372.0" cy="39.6" r="3" fill="#B4442F"/><circle cx="484.0" cy="36.2" r="3" fill="#B4442F"/><circle cx="596.0" cy="34.9" r="3" fill="#B4442F"/><path d="M148.0,225.0 L204.0,198.6 L260.0,166.3 L372.0,152.2 L484.0,150.0 L596.0,149.1" fill="none" stroke="#C08A1E" stroke-width="2"/><circle cx="148.0" cy="225.0" r="3" fill="#C08A1E"/><circle cx="204.0" cy="198.6" r="3" fill="#C08A1E"/><circle cx="260.0" cy="166.3" r="3" fill="#C08A1E"/><circle cx="372.0" cy="152.2" r="3" fill="#C08A1E"/><circle cx="484.0" cy="150.0" r="3" fill="#C08A1E"/><circle cx="596.0" cy="149.1" r="3" fill="#C08A1E"/><path d="M204.0,263.5 L260.0,264.3 L372.0,262.0 L484.0,261.2 L596.0,261.2" fill="none" stroke="#8A6D3B" stroke-width="2"/><circle cx="204.0" cy="263.5" r="3" fill="#8A6D3B"/><circle cx="260.0" cy="264.3" r="3" fill="#8A6D3B"/><circle cx="372.0" cy="262.0" r="3" fill="#8A6D3B"/><circle cx="484.0" cy="261.2" r="3" fill="#8A6D3B"/><circle cx="596.0" cy="261.2" r="3" fill="#8A6D3B"/><path d="M148.0,233.5 L204.0,232.7 L260.0,232.0 L372.0,230.7 L484.0,229.6 L596.0,229.3" fill="none" stroke="#7A6A9B" stroke-width="2"/><circle cx="148.0" cy="233.5" r="3" fill="#7A6A9B"/><circle cx="204.0" cy="232.7" r="3" fill="#7A6A9B"/><circle cx="260.0" cy="232.0" r="3" fill="#7A6A9B"/><circle cx="372.0" cy="230.7" r="3" fill="#7A6A9B"/><circle cx="484.0" cy="229.6" r="3" fill="#7A6A9B"/><circle cx="596.0" cy="229.3" r="3" fill="#7A6A9B"/><line x1="64" y1="266" x2="624" y2="266" stroke="#2E7D8C" stroke-width="2.4" stroke-dasharray="4 3"/><line x1="64" y1="266" x2="624" y2="266" stroke="#2F6B45" stroke-width="2.4" stroke-dasharray="4 3"/><text class="ax" x="64" y="306">electrical coupling rho = R_shared / R_own</text><text class="ax" transform="translate(15,141.0) rotate(-90)" text-anchor="middle">median AC violation depth [p.u.]</text></svg><div class="lg"><span class="lgi"><i style="background:#B4442F"></i>naive, no band</span><span class="lgi"><i style="background:#C08A1E"></i>naive, 0.005 band</span><span class="lgi"><i style="background:#8A6D3B"></i>naive, 0.010 band</span><span class="lgi"><i style="background:#7A6A9B"></i>joint, no band</span><span class="lgi"><i style="background:#2E7D8C"></i>joint, 0.005 band</span><span class="lgi"><i style="background:#2F6B45"></i>joint, 0.010 band</span></div>
+<figcaption><b>Figure 1.</b> Median AC violation depth against shared-resistance fraction &rho;.
+The theoretical split is visible directly: <b>naive violation depth grows with &rho;</b> (0.0108 &rarr;
+0.0231 p.u. across the &rho; range with no band), while <b>joint violation depth is flat in &rho;</b>
+(0.0033 &rarr; 0.0037 p.u.), because it is a linearisation residual and not an allocation error.
+Empty bins are &rho; ranges the topology generator did not populate.</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 650 320" class="ch" role="img"><line class="grid" x1="64" y1="280.0" x2="632" y2="280.0"/><text class="tk" x="56" y="283.5" text-anchor="end">0.000</text><line class="grid" x1="64" y1="242.0" x2="632" y2="242.0"/><text class="tk" x="56" y="245.5" text-anchor="end">0.005</text><line class="grid" x1="64" y1="204.0" x2="632" y2="204.0"/><text class="tk" x="56" y="207.5" text-anchor="end">0.010</text><line class="grid" x1="64" y1="128.0" x2="632" y2="128.0"/><text class="tk" x="56" y="131.5" text-anchor="end">0.020</text><line class="grid" x1="64" y1="52.0" x2="632" y2="52.0"/><text class="tk" x="56" y="55.5" text-anchor="end">0.030</text><text class="tk" x="64.0" y="298" text-anchor="middle">0.00</text><text class="tk" x="206.0" y="298" text-anchor="middle">0.25</text><text class="tk" x="348.0" y="298" text-anchor="middle">0.50</text><text class="tk" x="490.0" y="298" text-anchor="middle">0.75</text><text class="tk" x="632.0" y="298" text-anchor="middle">1.00</text><circle cx="243.3" cy="280.0" r="2.6" fill="#7A6A9B" opacity="0.55"/><circle cx="236.9" cy="280.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="243.3" cy="242.0" r="2.6" fill="#2E7D8C" opacity="0.55"/><circle cx="236.9" cy="242.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="236.9" cy="204.0" r="2.4" fill="#C9A227" opacity="0.55"/><circle cx="243.3" cy="204.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="236.9" cy="204.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="351.2" cy="280.0" r="3.9" fill="#7A6A9B" opacity="0.55"/><circle cx="344.8" cy="280.0" r="3.9" fill="#B4442F" opacity="0.55"/><circle cx="351.2" cy="242.0" r="3.9" fill="#2E7D8C" opacity="0.55"/><circle cx="344.8" cy="242.0" r="3.9" fill="#B4442F" opacity="0.55"/><circle cx="344.8" cy="204.0" r="3.1" fill="#C9A227" opacity="0.55"/><circle cx="351.2" cy="204.0" r="3.5" fill="#2E7D8C" opacity="0.55"/><circle cx="344.8" cy="204.0" r="3.5" fill="#B4442F" opacity="0.55"/><circle cx="464.8" cy="280.0" r="4.0" fill="#7A6A9B" opacity="0.55"/><circle cx="458.4" cy="280.0" r="4.0" fill="#B4442F" opacity="0.55"/><circle cx="464.8" cy="242.0" r="4.0" fill="#2E7D8C" opacity="0.55"/><circle cx="458.4" cy="242.0" r="4.0" fill="#B4442F" opacity="0.55"/><circle cx="458.4" cy="204.0" r="3.2" fill="#C9A227" opacity="0.55"/><circle cx="464.8" cy="204.0" r="3.6" fill="#2E7D8C" opacity="0.55"/><circle cx="458.4" cy="204.0" r="3.6" fill="#B4442F" opacity="0.55"/><circle cx="567.0" cy="280.0" r="3.9" fill="#7A6A9B" opacity="0.55"/><circle cx="560.6" cy="280.0" r="3.9" fill="#B4442F" opacity="0.55"/><circle cx="567.0" cy="242.0" r="3.9" fill="#2E7D8C" opacity="0.55"/><circle cx="560.6" cy="242.0" r="3.9" fill="#B4442F" opacity="0.55"/><circle cx="560.6" cy="204.0" r="3.2" fill="#C9A227" opacity="0.55"/><circle cx="567.0" cy="204.0" r="3.5" fill="#2E7D8C" opacity="0.55"/><circle cx="560.6" cy="204.0" r="3.5" fill="#B4442F" opacity="0.55"/><circle cx="135.4" cy="280.0" r="2.9" fill="#7A6A9B" opacity="0.55"/><circle cx="129.0" cy="280.0" r="2.9" fill="#B4442F" opacity="0.55"/><circle cx="135.4" cy="242.0" r="2.9" fill="#2E7D8C" opacity="0.55"/><circle cx="129.0" cy="242.0" r="2.9" fill="#B4442F" opacity="0.55"/><circle cx="129.0" cy="204.0" r="2.8" fill="#C9A227" opacity="0.55"/><circle cx="135.4" cy="204.0" r="2.7" fill="#2E7D8C" opacity="0.55"/><circle cx="237.6" cy="280.0" r="3.7" fill="#7A6A9B" opacity="0.55"/><circle cx="231.2" cy="280.0" r="3.7" fill="#B4442F" opacity="0.55"/><circle cx="237.6" cy="242.0" r="3.8" fill="#2E7D8C" opacity="0.55"/><circle cx="231.2" cy="242.0" r="3.7" fill="#B4442F" opacity="0.55"/><circle cx="231.2" cy="204.0" r="3.2" fill="#C9A227" opacity="0.55"/><circle cx="237.6" cy="204.0" r="3.4" fill="#2E7D8C" opacity="0.55"/><circle cx="237.6" cy="280.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="231.2" cy="280.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="231.2" cy="242.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="163.8" cy="280.0" r="2.5" fill="#7A6A9B" opacity="0.55"/><circle cx="157.4" cy="280.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="163.8" cy="242.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="157.4" cy="242.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="157.4" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="163.8" cy="204.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="157.4" cy="204.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="231.2" cy="204.0" r="3.3" fill="#B4442F" opacity="0.55"/><circle cx="129.0" cy="204.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="231.9" cy="280.0" r="2.7" fill="#7A6A9B" opacity="0.55"/><circle cx="225.5" cy="280.0" r="2.7" fill="#B4442F" opacity="0.55"/><circle cx="231.9" cy="242.0" r="2.7" fill="#2E7D8C" opacity="0.55"/><circle cx="225.5" cy="242.0" r="2.7" fill="#B4442F" opacity="0.55"/><circle cx="225.5" cy="204.0" r="2.5" fill="#C9A227" opacity="0.55"/><circle cx="231.9" cy="204.0" r="2.6" fill="#2E7D8C" opacity="0.55"/><circle cx="225.5" cy="204.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="567.0" cy="280.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="560.6" cy="280.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="560.6" cy="242.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="464.8" cy="280.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="458.4" cy="280.0" r="2.2" fill="#C9A227" opacity="0.55"/><circle cx="458.4" cy="242.0" r="2.2" fill="#C9A227" opacity="0.55"/><circle cx="158.1" cy="280.0" r="2.5" fill="#7A6A9B" opacity="0.55"/><circle cx="151.7" cy="280.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="158.1" cy="242.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="151.7" cy="242.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="151.7" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="158.1" cy="204.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="151.7" cy="204.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="141.0" cy="280.0" r="2.7" fill="#7A6A9B" opacity="0.55"/><circle cx="134.6" cy="280.0" r="2.7" fill="#B4442F" opacity="0.55"/><circle cx="141.0" cy="242.0" r="2.7" fill="#2E7D8C" opacity="0.55"/><circle cx="134.6" cy="242.0" r="2.7" fill="#B4442F" opacity="0.55"/><circle cx="134.6" cy="204.0" r="2.5" fill="#C9A227" opacity="0.55"/><circle cx="141.0" cy="204.0" r="2.6" fill="#2E7D8C" opacity="0.55"/><circle cx="134.6" cy="204.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="152.4" cy="280.0" r="2.4" fill="#7A6A9B" opacity="0.55"/><circle cx="146.0" cy="280.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="152.4" cy="242.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="146.0" cy="242.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="146.0" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="152.4" cy="204.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="146.0" cy="204.0" r="2.1" fill="#B4442F" opacity="0.55"/><circle cx="561.4" cy="280.0" r="2.6" fill="#7A6A9B" opacity="0.55"/><circle cx="555.0" cy="280.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="561.4" cy="242.0" r="2.6" fill="#2E7D8C" opacity="0.55"/><circle cx="555.0" cy="242.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="555.0" cy="204.0" r="2.4" fill="#C9A227" opacity="0.55"/><circle cx="561.4" cy="204.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="555.0" cy="204.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="356.9" cy="280.0" r="2.6" fill="#7A6A9B" opacity="0.55"/><circle cx="350.5" cy="280.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="356.9" cy="242.0" r="2.6" fill="#2E7D8C" opacity="0.55"/><circle cx="350.5" cy="242.0" r="2.6" fill="#B4442F" opacity="0.55"/><circle cx="350.5" cy="204.0" r="2.4" fill="#C9A227" opacity="0.55"/><circle cx="356.9" cy="204.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="356.9" cy="280.0" r="2.1" fill="#2E7D8C" opacity="0.55"/><circle cx="350.5" cy="280.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="350.5" cy="242.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="231.9" cy="280.0" r="2.1" fill="#2E7D8C" opacity="0.55"/><circle cx="225.5" cy="280.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="225.5" cy="242.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="470.5" cy="280.0" r="2.2" fill="#7A6A9B" opacity="0.55"/><circle cx="464.1" cy="280.0" r="2.2" fill="#B4442F" opacity="0.55"/><circle cx="470.5" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="464.1" cy="242.0" r="2.2" fill="#B4442F" opacity="0.55"/><circle cx="464.1" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="470.5" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="470.5" cy="280.0" r="2.1" fill="#2E7D8C" opacity="0.55"/><circle cx="464.1" cy="280.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="464.1" cy="242.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="146.7" cy="280.0" r="2.5" fill="#7A6A9B" opacity="0.55"/><circle cx="140.3" cy="280.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="146.7" cy="242.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="140.3" cy="242.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="140.3" cy="204.0" r="2.4" fill="#C9A227" opacity="0.55"/><circle cx="146.7" cy="204.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="140.3" cy="204.0" r="2.1" fill="#B4442F" opacity="0.55"/><circle cx="129.7" cy="280.0" r="2.3" fill="#7A6A9B" opacity="0.55"/><circle cx="123.3" cy="280.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="129.7" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="123.3" cy="242.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="123.3" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="129.7" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="339.8" cy="280.0" r="2.3" fill="#7A6A9B" opacity="0.55"/><circle cx="333.4" cy="280.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="339.8" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="333.4" cy="242.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="333.4" cy="204.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="339.8" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="333.4" cy="204.0" r="2.2" fill="#B4442F" opacity="0.55"/><circle cx="350.5" cy="204.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="572.7" cy="280.0" r="2.4" fill="#7A6A9B" opacity="0.55"/><circle cx="566.3" cy="280.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="572.7" cy="242.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="566.3" cy="242.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="566.3" cy="204.0" r="2.2" fill="#C9A227" opacity="0.55"/><circle cx="572.7" cy="204.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="566.3" cy="204.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="345.5" cy="280.0" r="2.5" fill="#7A6A9B" opacity="0.55"/><circle cx="339.1" cy="280.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="345.5" cy="242.0" r="2.5" fill="#2E7D8C" opacity="0.55"/><circle cx="339.1" cy="242.0" r="2.5" fill="#B4442F" opacity="0.55"/><circle cx="339.1" cy="204.0" r="2.3" fill="#C9A227" opacity="0.55"/><circle cx="345.5" cy="204.0" r="2.4" fill="#2E7D8C" opacity="0.55"/><circle cx="339.1" cy="204.0" r="2.4" fill="#B4442F" opacity="0.55"/><circle cx="169.4" cy="280.0" r="2.3" fill="#7A6A9B" opacity="0.55"/><circle cx="163.0" cy="280.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="169.4" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="163.0" cy="242.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="163.0" cy="204.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="169.4" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="163.0" cy="204.0" r="2.2" fill="#B4442F" opacity="0.55"/><circle cx="459.1" cy="280.0" r="2.3" fill="#7A6A9B" opacity="0.55"/><circle cx="452.7" cy="280.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="459.1" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="452.7" cy="242.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="452.7" cy="204.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="459.1" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="452.7" cy="204.0" r="2.2" fill="#B4442F" opacity="0.55"/><circle cx="141.0" cy="280.0" r="2.1" fill="#2E7D8C" opacity="0.55"/><circle cx="134.6" cy="280.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="134.6" cy="242.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="249.0" cy="280.0" r="2.3" fill="#7A6A9B" opacity="0.55"/><circle cx="242.6" cy="280.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="249.0" cy="242.0" r="2.3" fill="#2E7D8C" opacity="0.55"/><circle cx="242.6" cy="242.0" r="2.3" fill="#B4442F" opacity="0.55"/><circle cx="242.6" cy="204.0" r="2.1" fill="#C9A227" opacity="0.55"/><circle cx="249.0" cy="204.0" r="2.2" fill="#2E7D8C" opacity="0.55"/><circle cx="242.6" cy="204.0" r="2.2" fill="#B4442F" opacity="0.55"/><path d="M149.2,133.6 L206.0,95.9 L262.8,93.6 L319.6,50.0 L376.4,53.7 L433.2,39.5 L490.0,83.8 L546.8,43.6" fill="none" stroke="#B4442F" stroke-width="2.4"/><circle cx="149.2" cy="133.6" r="3.4" fill="#B4442F"/><circle cx="206.0" cy="95.9" r="3.4" fill="#B4442F"/><circle cx="262.8" cy="93.6" r="3.4" fill="#B4442F"/><circle cx="319.6" cy="50.0" r="3.4" fill="#B4442F"/><circle cx="376.4" cy="53.7" r="3.4" fill="#B4442F"/><circle cx="433.2" cy="39.5" r="3.4" fill="#B4442F"/><circle cx="490.0" cy="83.8" r="3.4" fill="#B4442F"/><circle cx="546.8" cy="43.6" r="3.4" fill="#B4442F"/><path d="M149.2,237.8 L206.0,235.8 L262.8,236.1 L319.6,235.2 L376.4,233.6 L433.2,233.0 L490.0,234.3 L546.8,233.1" fill="none" stroke="#2E7D8C" stroke-width="2.4"/><circle cx="149.2" cy="237.8" r="3.4" fill="#2E7D8C"/><circle cx="206.0" cy="235.8" r="3.4" fill="#2E7D8C"/><circle cx="262.8" cy="236.1" r="3.4" fill="#2E7D8C"/><circle cx="319.6" cy="235.2" r="3.4" fill="#2E7D8C"/><circle cx="376.4" cy="233.6" r="3.4" fill="#2E7D8C"/><circle cx="433.2" cy="233.0" r="3.4" fill="#2E7D8C"/><circle cx="490.0" cy="234.3" r="3.4" fill="#2E7D8C"/><circle cx="546.8" cy="233.1" r="3.4" fill="#2E7D8C"/><text class="ax" x="348" y="314" text-anchor="middle">shared-resistance fraction &#961;</text><text class="ax" x="14" y="147" text-anchor="middle" transform="rotate(-90 14 147)">planning band (p.u. of u)</text></svg>
+<div class="lg">
+  <span class="lgi"><i style="background:#B4442F"></i>naive, violated</span>
+  <span class="lgi"><i style="background:#C9A227"></i>naive, secure</span>
+  <span class="lgi"><i style="background:#7A6A9B"></i>joint, violated</span>
+  <span class="lgi"><i style="background:#2E7D8C"></i>joint, secure</span>
+</div>
+<figcaption><b>Figure 2.</b> The predicted failure boundary on the (&rho;, margin) plane. Each solid
+line is the band a planner must hold to stay secure &mdash; the realised D_err &mdash; for that
+allocation mode; allocations plotted <em>below</em> a line are predicted to violate. Observed
+outcomes are overlaid as dots (area &prop; count). The joint boundary sits at 0.0055&ndash;0.0062&nbsp;p.u.
+and is nearly flat in &rho;; the naive boundary sits at 0.019&ndash;0.031&nbsp;p.u. and rises with &rho;.
+The 0.005 band that clears every joint case sits just under the joint boundary at low &rho; and just
+over it at high &rho; &mdash; which is why the zero-band joint column still shows violations.</figcaption>
+</figure>
+</section>
+
+<section>
+<div class="snum">04</div>
+<h2>What the criterion gets wrong</h2>
+<p>Four imperfections, none of them removable by re-tuning:</p>
+
+<h3>The classification test came out degenerate</h3>
+<p>Once any band &ge; 0.005 exists, correctly-allocated joint envelopes violate in 0 of 1350
+synthetic and 0 of 25 IEEE-33 cases at a static operating point. There are no positives to
+discriminate, so <strong>no ROC curve is reported and no threshold was fitted</strong> &mdash; &#923;'s
+threshold is 1 by construction, not by calibration. Reporting an AUC here would be reporting the
+band policy, not the criterion. On the one non-degenerate column (joint, band = 0) &#923;&nbsp;&gt;&nbsp;1
+flags all 797 violations and 13 non-violations: 100% recall, 98.4% precision, no misses.</p>
+
+<h3>&#923; as derived does not cover mode A</h3>
+<p>For naive allocation at bands of 0.005 and 0.010, &#923;&nbsp;&le;&nbsp;1 while the AC solution
+violates &mdash; 797 and 463 false negatives respectively. This is not a tuning failure: D_err models
+only the loss term, whereas naive allocation fails for an entirely separate and larger reason, the
+factor-N over-allocation. A planner using one-at-a-time headroom needs the allocation term added
+before &#923; means anything. Stated plainly: <strong>the criterion is valid for jointly certified
+envelopes and under-predicts for naive ones.</strong></p>
+
+<h3>A previous attribution in this project was wrong</h3>
+<p>Closed-loop violations were earlier attributed to linearisation alone. Two error sources are
+present, of comparable size: linearisation (&le;&nbsp;0.0042&nbsp;p.u. here, 0.0101 at the extreme)
+<em>and</em> temporal aggregation of a 15-minute envelope onto 1-minute reality, worth up to
+55.5&nbsp;kW of intra-interval feeder overshoot &#8776; 0.0040&nbsp;p.u. at the weak end. A band sized
+from the static criterion alone is therefore roughly half the band a real 15-minute DOE scheme needs.</p>
+
+<h3>An unexplained result, left unexplained</h3>
+<p>The earlier closed-loop distance sweep showed violations growing with &rho; even for correctly
+allocated envelopes, whereas the static test here shows joint allocation error is flat in &rho;.
+The plausible explanation is an interaction between the temporal-aggregation term and coupling.
+<strong>This has not been tested</strong> and is recorded as an open discrepancy rather than resolved
+in the criterion's favour.</p>
+
+<div class="note"><strong>Scope of the test set.</strong> The task asked for at least one additional
+<em>published</em> feeder. IEEE 33-bus is used and is genuinely held out, but IEEE&nbsp;69 was not
+added: its 68 branch impedances were not available in this environment and reproducing them from
+memory would have put invented data into a validation set. The 60 synthetic topologies stand in as
+the derivation set instead. Supplying an IEEE-69 branch table would close this gap without any
+change to the code.</div>
+</section>
+
+<section>
+<div class="snum">05</div>
+<h2>Code</h2>
+<p>Two modules, both in <code>study/</code> on the working branch.</p>
+<pre><code>criterion.py       derivation, RadialNet (LinDistFlow + AC sweep on one code path),
+                   random_radial(), allocate_doe(), naive_doe(), corner_test(),
+                   lambda_index(), coupling(), scale_to_vmin(), pick_hub_pair()
+sweep_criterion.py derivation_set(60 topologies) x test_set(IEEE 33, held out)
+                   RHOS    = [0.12, 0.30, 0.50, 0.70, 0.88]
+                   MARGINS = [0.9560, 0.9650, 0.9750]
+                   BANDS   = [0, 0.005, 0.010]
+                   -> crit_rows.json   (4675 rows)</code></pre>
+<p>Each row records &rho;, the baseline margin, the band, the planned cap, &#923;, the AC voltage from
+the sweep, the realised violation, and the linearisation error. Rerunning
+<code>python sweep_criterion.py</code> regenerates the table; the figures are built from it.</p>
+</section>
+
+<section>
+<div class="snum">06</div>
+<h2>Beyond bus fleets</h2>
+<p>Nothing in the derivation refers to buses. The criterion needs three things: connection points
+that share feeder resistance (&rho;&nbsp;&gt;&nbsp;0), a load that can move between them, and an
+allocation computed per site. Any resource with those properties inherits the result.</p>
+<p><strong>Delivery-fleet depots.</strong> Structurally the closest case &mdash; several depots on one
+feeder, vehicles reassignable between them overnight. &tau; is larger (hours, not minutes), which by
+the &tau; argument changes nothing about the voltage criterion and everything about the energy
+feasibility problem. Depots are also more likely to sit on a shared industrial lateral, so &rho;
+runs higher than the transit case and the naive boundary is correspondingly worse.</p>
+<p><strong>Mobile and relocatable chargers.</strong> Here &rho; is not a fixed property of the network
+but a decision variable: siting a mobile charger chooses its shared resistance. The criterion turns
+into a siting constraint &mdash; place the unit so the resulting &rho; keeps &#923;&nbsp;&le;&nbsp;1
+against the existing band, rather than de-rating the band afterwards.</p>
+<p><strong>Vehicle-to-grid and shared building storage.</strong> Bidirectional injection makes S
+signed, which the derivation already accommodates (D_err depends on S&sup2;), but reverse flow can
+raise voltage above V<sub>max</sub>, and the monotonicity argument that justifies corner
+certification then needs the upper corner tested as well as the lower.</p>
+<p>The useful generalisation is the parameterisation itself: a fleet's grid impact under per-site
+envelopes is characterised by (&rho;, band, max simultaneous draw), and not by vehicle count,
+duty cycle, or dwell time except through those three. That is what makes the boundary in
+Figure&nbsp;2 portable to resources whose mobility looks nothing like a bus timetable.</p>
+</section>
+
+<footer>Validation data: <code>crit_rows.json</code>, 4675 allocations across 61 topologies.
+AC results from a backward/forward sweep solver; no reported violation comes from the model the
+allocation was optimised against.</footer>
+</div>
+</div>
