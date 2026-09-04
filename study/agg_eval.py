@@ -74,6 +74,11 @@ for fn in sorted(glob.glob("agg_b*.npz")):
         # classification, per minute, LAMBDA vs LAMBDA_total
         tp_e=int((( lam_e > 1) &  viol).sum()), fp_e=int((( lam_e > 1) & ~viol).sum()),
         fn_e=int(((lam_e <= 1) &  viol).sum()), tn_e=int(((lam_e <= 1) & ~viol).sum()),
+        # how deep are the violations LAMBDA_total misses?
+        fn_depth_max=float((VMIN - np.sqrt(np.maximum(uac.min(0), 1e-9)))[viol & (lam_t <= 1)].max(initial=0.0)),
+        fn_depth_med=float(np.median((VMIN - np.sqrt(np.maximum(uac.min(0), 1e-9)))[viol & (lam_t <= 1)])) if int((viol & (lam_t <= 1)).sum()) else 0.0,
+        tp_depth_med=float(np.median((VMIN - np.sqrt(np.maximum(uac.min(0), 1e-9)))[viol & (lam_t > 1)])) if int((viol & (lam_t > 1)).sum()) else 0.0,
+        lam_t_fn_med=float(np.median(lam_t[viol & (lam_t <= 1)])) if int((viol & (lam_t <= 1)).sum()) else 0.0,
         tp_t=int((( lam_t > 1) &  viol).sum()), fp_t=int((( lam_t > 1) & ~viol).sum()),
         fn_t=int(((lam_t <= 1) &  viol).sum()), tn_t=int(((lam_t <= 1) & ~viol).sum()),
     ))
