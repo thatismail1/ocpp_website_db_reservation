@@ -58,32 +58,72 @@ def derivation_set(n_top=20):
     return out
 
 
-def test_set():
-    """IEEE 33-bus, published impedances. Held out."""
-    import system as S
-    par, ch, bidx, r, x, order = S.feeder_topology()
-    p = np.zeros(33); q = np.zeros(33)
-    for b, (pp, qq) in S.LOAD.items():
-        p[b - 1] = pp; q[b - 1] = qq
-    rr = np.array([r[bidx[j]] for j in range(1, 33)])
-    xx = np.array([x[bidx[j]] for j in range(1, 33)])
-    parent = np.array([max(par[j], 0) for j in range(33)])
-    out = []
-    base = CR.RadialNet(parent, rr, xx, p, q)
-    pairs = []
+def test_set(tag="ieee33"):
+    """Published feeders, real impedances, held out from the derivation set.
+
+    ieee33 : the project's own branch table (Baran & Wu 1989, 33-bus).
+    ieee69 : MATPOWER data/case69.m, whose header cites Baran & Wu 1989,
+             "Optimal capacitor placement on radial distribution systems",
+             IEEE Trans. Power Delivery 4(1):725-734. Parsed from the file,
+             not reconstructed. Base case reproduces the published minimum
+             voltage 0.9092 p.u. at bus 65 with a 1.0 p.u. slack.
+    """
+    mk = CR.ieee33 if tag == "ieee33" else CR.ieee69
+    base = mk()
+    out, pairs = [], []
     for rho_t in RHOS:
         hp, err = CR.pick_hub_pair(base, rho_t)
         if hp is not None:
             pairs.append((hp, CR.coupling(base, *hp)))
     for hp, rho in pairs:
         for vb in MARGINS:
-            net = CR.RadialNet(parent, rr, xx, p, q)
+            net = mk()
             CR.scale_to_vmin(net, vb)
             for band in BANDS:
-                out += one(net, hp, V_MIN + band, "ieee33",
+                out += one(net, hp, V_MIN + band, tag,
                            dict(seed=0, rho=rho, v_base=vb, band=band,
                                 margin=vb ** 2 - V_MIN ** 2))
     return out
+
+
+def nhub_set():
+    """N-hub check on the project's own 4-hub feeder (buses 18, 33, 22, 25),
+    plus H = 2..5 on IEEE-69, verifying (i) the exact quadratic form of T2
+    against loss_drop, (ii) corner certification at N hubs against the AC
+    solver, and (iii) LAMBDA at N hubs."""
+    import numpy as np
+    rows = []
+    cases = [("ieee33-4hub", CR.ieee33, [17, 32, 21, 24]),
+             ("ieee69-2hub", CR.ieee69, [64, 26]),
+             ("ieee69-3hub", CR.ieee69, [64, 26, 45]),
+             ("ieee69-4hub", CR.ieee69, [64, 26, 45, 51]),
+             ("ieee69-5hub", CR.ieee69, [64, 26, 45, 51, 34])]
+    for tag, mk, hubs in cases:
+        for vb in MARGINS:
+            for band in BANDS:
+                net = mk(); CR.scale_to_vmin(net, vb)
+                vplan = V_MIN + band
+                P = CR.allocate_doe(net, hubs, vplan, [CAPS] * len(hubs))
+                if P is None:
+                    continue
+                r = CR.corner_test(net, hubs, P, V_MIN)
+                pieces, D = CR.err_form(net, hubs)
+                p = net.p.copy()
+                for k, h in enumerate(hubs):
+                    p[h] += P[k]
+                m = int(np.argmin(net.u_lin(p_kw=p)))
+                Cm, _, _ = pieces(m)
+                form = D(m, P)
+                exact = float(net.loss_drop(p_kw=p)[m])
+                bandu = vplan ** 2 - V_MIN ** 2
+                rows.append(dict(set=tag, H=len(hubs), v_base=vb, band=band,
+                                 form=form, exact=exact,
+                                 form_rel_err=abs(form - exact) / max(exact, 1e-12),
+                                 minEig=float(np.linalg.eigvalsh(Cm).min()),
+                                 lam=(form / bandu) if bandu > 1e-12 else float("inf"),
+                                 viol=r["viol"], v_ac=r["v_ac"],
+                                 P=[float(z) for z in P]))
+    return rows
 
 
 if __name__ == "__main__":
@@ -92,6 +132,11 @@ if __name__ == "__main__":
     if what in ("all", "deriv"):
         res += derivation_set(int(os.environ.get("NTOP", 20)))
     if what in ("all", "test"):
-        res += test_set()
+        res += test_set("ieee33")
+        res += test_set("ieee69")
+    if what == "nhub":
+        import json as _j
+        _j.dump(nhub_set(), open("crit_nhub.json", "w"), indent=1)
+        print("nhub rows written"); raise SystemExit
     json.dump(res, open("crit_rows.json", "w"))
     print("rows:", len(res))
