@@ -1,0 +1,70 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Bibliography
+%
+%  POLICY FOR THIS FILE: only entries whose bibliographic data could be
+%  verified from a primary source are given in full below. Entries that the
+%  manuscript needs but whose metadata could NOT be verified are listed at the
+%  bottom as TODO stubs with a note on what to look up. Fill them in from the
+%  publisher record before submitting. Do not submit with a stub in place --
+%  an approximated citation is worse than a missing one.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% --- VERIFIED --------------------------------------------------------------
+% Source: header of MATPOWER data/case69.m, which cites this paper as the
+% origin of the 69-bus system used here, with DOI 10.1109/61.19265.
+@article{baran1989capacitor,
+  author  = {Baran, M. E. and Wu, F. F.},
+  title   = {Optimal capacitor placement on radial distribution systems},
+  journal = {IEEE Transactions on Power Delivery},
+  volume  = {4},
+  number  = {1},
+  pages   = {725--734},
+  year    = {1989},
+  doi     = {10.1109/61.19265}
+}
+
+% Source: same MATPOWER header, listed as a further source for the 69-bus data.
+@article{das2008capacitors,
+  author  = {Das, D.},
+  title   = {Optimal placement of capacitors in radial distribution system
+             using a {Fuzzy-GA} method},
+  journal = {International Journal of Electrical Power \& Energy Systems},
+  volume  = {30},
+  number  = {6--7},
+  pages   = {361--367},
+  year    = {2008},
+  doi     = {10.1016/j.ijepes.2007.08.004}
+}
+
+% --- TODO: VERIFY BEFORE SUBMISSION ----------------------------------------
+% The manuscript's Related Work refers to these bodies of work in general
+% terms and does not cite them by key, precisely so that nothing unverified
+% enters the citation list. If you cite them, complete these entries first.
+%
+% 1. MATPOWER. Cite the software paper (Zimmerman, Murillo-Sanchez, Thomas,
+%    IEEE Trans. Power Systems, 2011) AND the specific version/DOI of the data
+%    file you used. Look up: exact volume/issue/pages and the Zenodo DOI for
+%    the release whose data/case69.m you parsed.
+%
+% 2. The LinDistFlow branch-flow model. Cite Baran & Wu's companion 1989 papers
+%    on network reconfiguration / load balancing, or Farivar & Low's branch-flow
+%    relaxation papers, depending on which formulation you present as the base.
+%    Look up: exact titles, volumes, pages.
+%
+% 3. Dynamic operating envelopes: the definitional reference for
+%    connection-specific per-interval limits, plus at least one alpha-fair
+%    allocation paper (the benchmark of Section V) and one field-trial report
+%    on refresh cadence. Look up: authors, venue, year, DOI for each.
+%
+% 4. Electric bus opportunity-charging coordination: two or three recent
+%    references establishing that the network is usually modelled either as a
+%    single aggregate limit or via full nonlinear OPF -- the gap this paper
+%    addresses. Look up: full records.
+%
+% 5. IEEE 33-bus system. If you cite a source for the 33-bus branch table
+%    separately from the 69-bus one, verify which Baran & Wu 1989 paper it
+%    comes from; the two are different papers in the same year.
+
+@misc{TODO,
+  note = {PLACEHOLDER -- remove this entry and complete items 1--5 above.}
+}

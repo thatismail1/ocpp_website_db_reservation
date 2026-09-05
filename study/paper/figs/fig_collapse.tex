@@ -1,0 +1,26 @@
+\begin{tikzpicture}
+\begin{axis}[width=\columnwidth,height=0.72\columnwidth,
+  xlabel={shared-resistance fraction $\rho$},
+  ylabel={$D_{\mathrm{agg}}^{C}$ p95 [p.u.]},
+  xmin=0,xmax=1,ymin=0,ymax=0.0135,grid=major,
+  legend style={font=\scriptsize,at={(0.02,0.98)},anchor=north west,draw=none,fill=none},
+  legend cell align=left,tick label style={font=\scriptsize},label style={font=\small}]
+\addplot[c1,dashed,forget plot,thick] coordinates {(0,0) (1,0.01242)};
+\addplot[c2,dashed,forget plot,thick] coordinates {(0,0) (1,0.01242)};
+\addplot[c3,dashed,forget plot,thick] coordinates {(0,0) (1,0.00833)};
+\addplot[c4,dashed,forget plot,thick] coordinates {(0,0) (1,0.00853)};
+\addplot[c5,dashed,forget plot,thick] coordinates {(0,0) (1,0.00853)};
+\addplot[c1,only marks,mark=*,mark size=1.4] coordinates {(0.0083,0.00010) (0.0860,0.00107) (0.2757,0.00343) (0.5148,0.00640) (0.6964,0.00866) (0.8173,0.01016) (0.9338,0.01161)};
+\addlegendentry{IEEE 33 (set A)}
+\addplot[c2,only marks,mark=*,mark size=1.4] coordinates {(0.1945,0.00242) (0.3688,0.00458) (0.4632,0.00576) (0.6475,0.00805) (0.7499,0.00932)};
+\addlegendentry{IEEE 33 (set B)}
+\addplot[c3,only marks,mark=*,mark size=1.4] coordinates {(0.0001,0.00000) (0.1043,0.00087) (0.2504,0.00209) (0.4645,0.00387) (0.6111,0.00510) (0.7314,0.00617) (0.8598,0.00718)};
+\addlegendentry{IEEE 69}
+\addplot[c4,only marks,mark=*,mark size=1.4] coordinates {(0.2294,0.00196) (0.6162,0.00526) (0.8632,0.00737)};
+\addlegendentry{S-front}
+\addplot[c5,only marks,mark=*,mark size=1.4] coordinates {(0.2391,0.00204) (0.5887,0.00503) (0.8787,0.00751)};
+\addlegendentry{S-back}
+\addplot[black,only marks,mark=o,mark size=2.4] coordinates {(0.5148,0.00568) (0.9338,0.00923)};
+\addlegendentry{20-vehicle runs}
+\end{axis}
+\end{tikzpicture}

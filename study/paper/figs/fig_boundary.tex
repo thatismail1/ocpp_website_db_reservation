@@ -1,0 +1,15 @@
+\begin{tikzpicture}
+\begin{axis}[width=\columnwidth,height=0.72\columnwidth,
+  xlabel={shared-resistance fraction $\rho$},
+  ylabel={required planning band [p.u.]},
+  xmin=0,xmax=1,ymin=0,ymax=0.035,grid=major,
+  legend style={font=\scriptsize,at={(0.02,0.98)},anchor=north west,draw=none,fill=none},
+  legend cell align=left,tick label style={font=\scriptsize},label style={font=\small}]
+\addplot[c1,mark=*,mark size=1.4,thick] coordinates {(0.1500,0.01916) (0.2500,0.02453) (0.3500,0.02453) (0.4500,0.02993) (0.5500,0.02978) (0.6500,0.03132) (0.7500,0.02582) (0.8500,0.03130)};
+\addlegendentry{one-at-a-time allocation}
+\addplot[c3,mark=*,mark size=1.4,thick] coordinates {(0.1500,0.00555) (0.2500,0.00584) (0.3500,0.00577) (0.4500,0.00588) (0.5500,0.00611) (0.6500,0.00616) (0.7500,0.00601) (0.8500,0.00619)};
+\addlegendentry{jointly certified allocation}
+\addplot[black,dotted,thick] coordinates {(0,0.005) (1,0.005)};
+\addlegendentry{a 0.005 p.u. band}
+\end{axis}
+\end{tikzpicture}
