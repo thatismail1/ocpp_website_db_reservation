@@ -37,7 +37,7 @@ Q15 = Q.reshape(S.N_BUS, S.T_DAY, 15).mean(2).repeat(15, axis=1)
 np.savez_compressed(out, P=P, Q=Q, P15=P15, Q15=Q15, Vm=pf["Vm"],
                     pmax15=pmax15, ctrl=ctrl, bus=bus, band=band,
                     hubbus=np.array([h.bus for h in S.HUBS]),
-                    feeder=os.environ.get("FEEDER", "ieee33"),
+                    feeder=os.environ.get("FEEDER", "ieee33") + os.environ.get("SYN_PROFILE", ""),
                     n_veh=int(os.environ.get("N_VEH", 12)))
 print("dumped", out, "Vmin %.4f uv %d" % (pf["Vm"].min(),
       int((pf["Vm"] < S.V_MIN - 1e-6).sum())), flush=True)

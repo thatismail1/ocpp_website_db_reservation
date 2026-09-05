@@ -1,0 +1,6 @@
+front rho 0.229: dumped syn_front_b3_0.005.npz Vmin 0.9521 uv 0  [107s]
+front rho 0.616: dumped syn_front_b8_0.005.npz Vmin 0.9490 uv 81  [95s]
+front rho 0.863: dumped syn_front_b14_0.005.npz Vmin 0.9469 uv 270  [92s]
+back rho 0.239: dumped syn_back_b11_0.005.npz Vmin 0.9558 uv 0  [97s]
+back rho 0.589: dumped syn_back_b17_0.005.npz Vmin 0.9538 uv 0  [100s]
+back rho 0.879: dumped syn_back_b20_0.005.npz Vmin 0.9522 uv 0  [100s]

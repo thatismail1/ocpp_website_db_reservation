@@ -43,7 +43,36 @@ N_BUS = 33
 # "Optimal capacitor placement on radial distribution systems", IEEE Trans.
 # Power Delivery 4(1):725-734, 1989). Everything downstream -- power flow,
 # envelopes, MPC, evaluation -- is topology-agnostic and picks this up.
-if os.environ.get("FEEDER", "ieee33") == "ieee69":
+if os.environ.get("FEEDER", "ieee33").startswith("synth"):
+    # ---- parametric radial feeder for the mechanism-manipulation test -----
+    # One structural knob: SYN_PROFILE decides where the resistance of hub A's
+    # path sits. "back" = a long thin lateral, most resistance accumulating
+    # near the tip (IEEE-33-like); "front" = most resistance close to the
+    # substation, the outer path electrically short (IEEE-69-like); "flat" =
+    # uniform. Total path resistance, load, and every other quantity are held
+    # identical across arms, so the profile is the only thing that varies.
+    _NMAIN = 20                       # branches on the main path, hub A at bus 21
+    _RTOT = float(os.environ.get("SYN_RTOT", 7.6))                     # ohm, total resistance root -> hub A
+    _PROF = os.environ.get("SYN_PROFILE", "flat")
+    _k = np.arange(_NMAIN, dtype=float)
+    if _PROF == "back":
+        _w = np.exp(2.2 * _k / (_NMAIN - 1))
+    elif _PROF == "front":
+        _w = np.exp(-2.2 * _k / (_NMAIN - 1))
+    else:
+        _w = np.ones(_NMAIN)
+    _w = _w / _w.sum() * _RTOT
+    BRANCH = [(j, j + 1, float(_w[j - 1]), float(_w[j - 1]) * 0.72)
+              for j in range(1, _NMAIN + 1)]
+    # two side laterals carrying hubs B and D, identical in both arms
+    _lat = 0.45
+    BRANCH += [(3, 22, _lat, _lat * 0.72)]
+    BRANCH += [(21 + i, 22 + i, _lat, _lat * 0.72) for i in range(1, 6)]
+    BRANCH += [(5, 28, _lat, _lat * 0.72)]
+    BRANCH += [(27 + i, 28 + i, _lat, _lat * 0.72) for i in range(1, 6)]
+    LOAD = {b: (110.0, 55.0) for b in range(2, 34)}
+    N_BUS = 33
+elif os.environ.get("FEEDER", "ieee33") == "ieee69":
     import re as _re
     _t = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            "case69.m")).read()
@@ -162,7 +191,10 @@ if os.environ.get("HUB_C_BARE"):
     HUBS[2].base_load_kw = 0.0
     HUBS[2].pv_kwp = 0.0
 
-if N_BUS == 69:
+if os.environ.get("FEEDER", "").startswith("synth"):
+    for _h, _b in zip(HUBS, [21, 27, 10, 33]):
+        _h.bus = _b
+elif N_BUS == 69:
     # A on the weak lateral tip (bus 65, the published minimum-voltage bus),
     # B at the end of the main feeder, D on a separate lateral; C is the
     # movable en-route point, as in the IEEE-33 sweep.

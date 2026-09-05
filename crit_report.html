@@ -89,7 +89,7 @@ footer{margin-top:3.5rem;padding-top:18px;border-top:1px solid var(--rule);font-
 </style>
 <div class="wrap">
 <header>
-  <div class="eyebrow">Distribution planning &middot; derivation, resolution, validation</div>
+  <div class="eyebrow">Distribution planning &middot; derivation, validation, manipulation test</div>
   <h1>When per-site operating envelopes fail under mobile shared flexible loads</h1>
   <p class="sub">Two additive error terms &mdash; the loss term LinDistFlow omits, and the
   intra-interval drift a 15-minute envelope cannot see &mdash; combine into one inequality
@@ -98,8 +98,8 @@ footer{margin-top:3.5rem;padding-top:18px;border-top:1px solid var(--rule);font-
   that was open in the previous version of this work.</p>
   <div class="meta">
     <span>4&#8239;760 static allocations</span><span>62 topologies</span>
-    <span>60&#8239;480 simulated minutes</span><span>2 feeders, 42 closed-loop runs</span><span>AC referee at every minute</span>
-    <span>nothing fitted</span>
+    <span>69&#8239;120 simulated minutes</span><span>4 topologies, 48 closed-loop runs</span><span>AC referee at every minute</span>
+    <span>manipulation-tested</span><span>nothing fitted</span>
   </div>
 </header>
 
@@ -345,19 +345,102 @@ clean violation-free regime below a coupling threshold: &rho;&nbsp;&le;&nbsp;0.2
 &rho;&nbsp;&le;&nbsp;0.611 on IEEE-69. Both feeders have control placements with substantial drift
 and no violations. &Lambda;<sub>total</sub> keeps precision 1.000 and FPR 0 on both. The alternative
 explanation &mdash; that the effect is a quirk of the IEEE-33 topology &mdash; is ruled out.</p>
-<p><b>What does not replicate.</b> On IEEE-33 the &rho;-dependence lives in the numerator:
-D<sub>agg</sub> p95 roughly triples across the coupled range (0.0040&nbsp;&rarr;&nbsp;0.0140) while
-D<sub>err</sub> falls. <b>On IEEE-69 neither term rises with &rho;</b> &mdash; D<sub>agg</sub> p95 is
-flat-to-falling (0.0091&nbsp;&rarr;&nbsp;0.0078) and D<sub>err</sub> is flat-to-slightly-rising
-(0.00242&nbsp;&rarr;&nbsp;0.00274). The &rho;-dependence there comes from the <em>denominator</em>:
-the certified slack at the binding bus falls from 0.0157 to 0.0119 as hub&nbsp;C moves toward the
-weak tip. Both feeders raise &Lambda;<sub>total</sub> with &rho;, but they get there by different
-routes, and only IEEE-33 supports the specific claim that intra-interval drift grows with coupling.</p>
-<p>This is a real difference, and it narrows one claim from the previous version. The mechanism
-sentence that survives both feeders is: <em>&Lambda;<sub>total</sub> rises with &rho;, so violations
-rise with &rho;</em>. The sentence that holds only on IEEE-33 is: <em>it rises because
-D<sub>agg</sub> grows with &rho;</em>. On IEEE-69 it rises because the slack shrinks. Two topologies
-are not enough to say which is typical.</p>
+<p><b>What did not appear to replicate, and why that reading was wrong.</b> Measured as the p95 of
+the <em>total</em> D<sub>agg</sub>, IEEE-33 shows a rise with &rho; (0.0040&nbsp;&rarr;&nbsp;0.0140)
+and IEEE-69 does not (0.0091&nbsp;&rarr;&nbsp;0.0078). That comparison was the wrong statistic. The
+total mixes the hub's own drift term with a background from every other bus's intra-interval
+deviation, and a p95 of a signed sum is not the sum of the parts &mdash; the background is large on
+IEEE-69 and the two components partly cancel. Decomposing D<sub>agg</sub> into the hub-C term alone
+resolves it: <b>on IEEE-69 that term rises monotonically from 0.00000 to 0.00718, exactly as it does
+on IEEE-33</b>. The mechanism replicates; the aggregate statistic hid it.</p>
+
+<h4 style="margin-top:1.8rem">The driver, decomposed and then manipulated</h4>
+<p>Split the hub-C contribution into how much the fleet actually drifts and how much the network
+weights that drift:</p>
+<div class="eq">D_agg&#7580;(m) = w_C &#183; &#947;_C ,   w_C = 2 R_mC / S_b = (2 R_mm / S_b) &#961;</div>
+<p>Both factors were measured separately at every simulated minute of all 48 closed-loop runs.
+The result is flat: <b>&gamma;<sub>C</sub> is 90.0&ndash;91.1&nbsp;kW (p95) in every run</b> &mdash;
+every &rho;, every feeder, both fleet sizes, both bands. The fleet's intra-interval drift is a
+property of the charger, not of the network: 90&nbsp;kW is 0.6&nbsp;&times; hub&nbsp;C's single
+150&nbsp;kW bay, set by how often that bay switches within a 15-minute interval. Everything that
+looked like &ldquo;drift grows with coupling&rdquo; is w<sub>C</sub>, which is proportional to &rho;
+<em>by definition</em> &mdash; corr(&rho;, w<sub>C</sub>) = +1.000 on every set. So the closed form
+is</p>
+<div class="eq">D_agg&#7580;(m)  =  (2 R_mm &#947;_C / S_b) &#183; &#961;      (linear in &#961;, slope fixed by topology and charger rating)</div>
+
+<div class="tw">
+<table>
+<thead><tr><th>Set</th><th>R<sub>mm</sub></th><th>&gamma;<sub>C</sub> (kW)</th><th>observed slope</th><th>2R<sub>mm</sub>&gamma;/S<sub>b</sub></th><th>ratio</th><th>d(slack)/d&#961;</th></tr></thead>
+<tbody>
+<tr><td>IEEE-33 fit</td><td>0.0690</td><td>90.1</td><td>0.01243</td><td>0.01243</td><td class="good">1.000</td><td>&minus;0.0080</td></tr>
+<tr><td>IEEE-33 holdout <span class="mut">(16 veh)</span></td><td>0.0690</td><td>90.0</td><td>0.01243</td><td>0.01242</td><td class="good">1.000</td><td>&minus;0.0120</td></tr>
+<tr><td>IEEE-69</td><td>0.0463</td><td>90.2</td><td>0.00838</td><td>0.00836</td><td class="good">1.003</td><td>+0.0007</td></tr>
+<tr><td>synthetic, front-loaded</td><td>0.0474</td><td>90.1</td><td>0.00854</td><td>0.00854</td><td class="good">1.000</td><td>&minus;0.0056</td></tr>
+<tr><td>synthetic, back-loaded</td><td>0.0474</td><td>90.1</td><td>0.00854</td><td>0.00854</td><td class="good">1.000</td><td>&minus;0.0041</td></tr>
+<tr><td>IEEE-33 holdout <span class="mut">(incl. 20 veh)</span></td><td>0.0690</td><td>90.0</td><td>0.01002</td><td>0.01242</td><td class="bad">0.807</td><td>&mdash;</td></tr>
+</tbody>
+</table>
+</div>
+<p class="cap">Slope of the hub-C drift term against &rho;, band 0.005, versus the closed form.</p>
+
+<p>Four independent topologies, 22 placements, agreement to three significant figures with a formula
+containing no fitted quantity. The one row that departs is named rather than dropped: the two
+20-vehicle runs sit <em>below</em> the line (0.00568 and 0.00923 against 0.00640 and 0.01160
+predicted), which drags that set's fitted slope to 0.807 of the closed form. A larger fleet holds
+hub&nbsp;C closer to its cap for longer, so the bay switches less within the interval and
+&gamma;<sub>C</sub>'s p95 understates its effect &mdash; the formula is an upper envelope there, not
+an equality.</p>
+
+<h4 style="margin-top:1.8rem">Manipulation test</h4>
+<p>Correlation across feeders is not a mechanism, so the structural hypothesis was tested by
+construction. Two synthetic radial feeders differing in exactly one property &mdash; where the
+resistance of hub A's path sits, concentrated near the substation (<em>front-loaded</em>) or
+accumulating toward the tip (<em>back-loaded</em>, the long-thin-lateral shape) &mdash; with total
+path resistance, hub layout, fleet, tariff and base-case minimum voltage (0.9570) all held equal,
+and the same three-point &rho; sweep run inside each arm.</p>
+<div class="tw">
+<table>
+<thead><tr><th>Arm</th><th>&#961;</th><th>Violating min.</th><th>slack p5</th><th>D<sub>agg</sub><sup>C</sup> p95</th><th>D<sub>err</sub> med</th></tr></thead>
+<tbody>
+<tr><td rowspan="3">front-loaded</td><td>0.229</td><td class="good">0</td><td>0.01204</td><td>0.00196</td><td>0.00135</td></tr>
+<tr><td>0.616</td><td class="bad">33</td><td>0.00988</td><td>0.00526</td><td>0.00136</td></tr>
+<tr><td>0.863</td><td class="bad">55</td><td>0.00847</td><td>0.00737</td><td>0.00138</td></tr>
+<tr><td rowspan="3">back-loaded</td><td>0.239</td><td class="good">0</td><td>0.01761</td><td>0.00204</td><td>0.00156</td></tr>
+<tr><td>0.589</td><td class="good">0</td><td>0.01619</td><td>0.00503</td><td>0.00165</td></tr>
+<tr><td>0.879</td><td class="good">0</td><td>0.01501</td><td>0.00751</td><td>0.00164</td></tr>
+</tbody>
+</table>
+</div>
+<p><b>The knob did not flip the mechanism.</b> The drift term's slope against &rho; is
+<em>identical</em> in both arms &mdash; 0.00854, the closed form to three figures &mdash; and slack
+falls with &rho; in both. What the knob did control is the slack <em>level</em>:
+0.0085&ndash;0.0120 front-loaded against 0.0150&ndash;0.0176 back-loaded, at the same base voltage.
+And that decides whether anything violates at all: 0/33/55 violating minutes in the front-loaded arm
+against 0/0/0 in the back-loaded one, with the same fleet, the same &rho;, and the same drift.</p>
+<p>So the causal chain the experiment supports is: <b>resistance profile &rarr; certified slack level
+&rarr; whether violations occur</b>; and, separately, <b>&rho; &rarr; drift weight &rarr;
+D<sub>agg</sub></b>, with the second link exact and topology-independent. The profile hypothesis is
+<em>refuted</em> as an explanation of the drift mechanism and <em>supported</em> as an explanation of
+violation incidence. One confound is inherent and stated: to reach the same base margin the two arms
+carry different total load (0.415 against 1.150 of nominal), because a back-loaded profile drops
+less voltage per kW of load.</p>
+
+<figure>
+<svg viewBox="0 0 650 320" class="ch" role="img"><line class="grid" x1="68" y1="278.0" x2="634" y2="278.0"/><text class="tk" x="60" y="281.5" text-anchor="end">0.000</text><line class="grid" x1="68" y1="219.3" x2="634" y2="219.3"/><text class="tk" x="60" y="222.8" text-anchor="end">0.003</text><line class="grid" x1="68" y1="160.7" x2="634" y2="160.7"/><text class="tk" x="60" y="164.2" text-anchor="end">0.006</text><line class="grid" x1="68" y1="102.0" x2="634" y2="102.0"/><text class="tk" x="60" y="105.5" text-anchor="end">0.009</text><line class="grid" x1="68" y1="43.3" x2="634" y2="43.3"/><text class="tk" x="60" y="46.8" text-anchor="end">0.012</text><text class="tk" x="68.0" y="296" text-anchor="middle">0</text><text class="tk" x="209.5" y="296" text-anchor="middle">0.25</text><text class="tk" x="351.0" y="296" text-anchor="middle">0.5</text><text class="tk" x="492.5" y="296" text-anchor="middle">0.75</text><text class="tk" x="634.0" y="296" text-anchor="middle">1</text><path d="M68.0,278.0 L634.0,35.1" fill="none" stroke="#B4442F" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/><path d="M68.0,278.0 L634.0,35.1" fill="none" stroke="#2E7D8C" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/><path d="M68.0,278.0 L634.0,115.0" fill="none" stroke="#7A6A9B" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/><path d="M68.0,278.0 L634.0,111.2" fill="none" stroke="#C08A1E" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/><path d="M68.0,278.0 L634.0,111.2" fill="none" stroke="#2F6B45" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/><circle cx="359.4" cy="152.9" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="462.2" cy="108.6" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="530.6" cy="79.3" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="596.5" cy="51.1" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="72.7" cy="276.0" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="116.7" cy="257.1" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="224.0" cy="210.9" r="3.6" fill="#B4442F" stroke="#B4442F" stroke-width="0"/><circle cx="330.2" cy="165.4" r="3.6" fill="#2E7D8C" stroke="#2E7D8C" stroke-width="0"/><circle cx="434.5" cy="120.6" r="3.6" fill="#2E7D8C" stroke="#2E7D8C" stroke-width="0"/><circle cx="492.4" cy="95.7" r="3.6" fill="#2E7D8C" stroke="#2E7D8C" stroke-width="0"/><circle cx="178.1" cy="230.7" r="3.6" fill="#2E7D8C" stroke="#2E7D8C" stroke-width="0"/><circle cx="276.7" cy="188.4" r="3.6" fill="#2E7D8C" stroke="#2E7D8C" stroke-width="0"/><circle cx="359.4" cy="167.0" r="4.6" fill="none" stroke="#2E7D8C" stroke-width="2.0"/><circle cx="596.5" cy="97.6" r="4.6" fill="none" stroke="#2E7D8C" stroke-width="2.0"/><circle cx="68.1" cy="278.0" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="209.7" cy="237.2" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="330.9" cy="202.3" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="413.9" cy="178.3" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="482.0" cy="157.3" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="554.6" cy="137.5" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="127.1" cy="261.0" r="3.6" fill="#7A6A9B" stroke="#7A6A9B" stroke-width="0"/><circle cx="556.6" cy="133.8" r="3.6" fill="#C08A1E" stroke="#C08A1E" stroke-width="0"/><circle cx="197.8" cy="239.7" r="3.6" fill="#C08A1E" stroke="#C08A1E" stroke-width="0"/><circle cx="416.8" cy="175.1" r="3.6" fill="#C08A1E" stroke="#C08A1E" stroke-width="0"/><circle cx="203.3" cy="238.1" r="3.6" fill="#2F6B45" stroke="#2F6B45" stroke-width="0"/><circle cx="401.2" cy="179.6" r="3.6" fill="#2F6B45" stroke="#2F6B45" stroke-width="0"/><circle cx="565.3" cy="131.2" r="3.6" fill="#2F6B45" stroke="#2F6B45" stroke-width="0"/><text class="ax" x="351" y="314" text-anchor="middle">shared-resistance fraction &#961;</text><text class="ax" x="13" y="146" text-anchor="middle" transform="rotate(-90 13 146)">D_agg from hub C, p95 (p.u. of u)</text></svg>
+<div class="lg">
+  <span class="lgi"><i style="background:#B4442F"></i>IEEE-33 fit</span>
+  <span class="lgi"><i style="background:#2E7D8C"></i>IEEE-33 holdout</span>
+  <span class="lgi"><i style="background:#7A6A9B"></i>IEEE-69</span>
+  <span class="lgi"><i style="background:#C08A1E"></i>synthetic front-loaded</span>
+  <span class="lgi"><i style="background:#2F6B45"></i>synthetic back-loaded</span>
+</div>
+<figcaption><b>Figure 1.</b> The hub's own drift term against &rho; on four topologies and 22
+placements. Dashed lines are the closed form 2R<sub>mm</sub>&gamma;<sub>C</sub>&#961;/S<sub>b</sub>
+&mdash; predictions, not fits; filled dots are measured p95 values. Each set lies on its own line
+because R<sub>mm</sub> differs; the slopes are not free parameters. Hollow rings are the two
+20-vehicle runs, the only points that fall below their line. This is the figure that replaces the
+earlier claim that the mechanism failed to replicate on IEEE-69.</figcaption>
+</figure>
 
 <figure>
 <svg viewBox="0 0 650 300" class="ch" role="img"><line class="grid" x1="66" y1="260.0" x2="634" y2="260.0"/><text class="tk" x="58" y="263.5" text-anchor="end">0</text><line class="grid" x1="66" y1="201.1" x2="634" y2="201.1"/><text class="tk" x="58" y="204.6" text-anchor="end">30</text><line class="grid" x1="66" y1="142.2" x2="634" y2="142.2"/><text class="tk" x="58" y="145.7" text-anchor="end">60</text><line class="grid" x1="66" y1="83.4" x2="634" y2="83.4"/><text class="tk" x="58" y="86.9" text-anchor="end">90</text><line class="grid" x1="66" y1="24.5" x2="634" y2="24.5"/><text class="tk" x="58" y="28.0" text-anchor="end">120</text><text class="tk" x="66.0" y="278" text-anchor="middle">0</text><text class="tk" x="208.0" y="278" text-anchor="middle">0.25</text><text class="tk" x="350.0" y="278" text-anchor="middle">0.5</text><text class="tk" x="492.0" y="278" text-anchor="middle">0.75</text><text class="tk" x="634.0" y="278" text-anchor="middle">1</text><text class="ax" x="350" y="294" text-anchor="middle">shared-resistance fraction &#961;</text><text class="ax" x="13" y="137" text-anchor="middle" transform="rotate(-90 13 137)">violating minutes (AC sweep)</text><path d="M70.7,260.0 L114.8,260.0 L222.6,260.0 L358.4,159.9 L461.6,124.6 L530.2,105.0 L596.4,89.3" fill="none" stroke="#B4442F" stroke-width="2.4"/><circle cx="70.7" cy="260.0" r="3.4" fill="#B4442F"/><circle cx="114.8" cy="260.0" r="3.4" fill="#B4442F"/><circle cx="222.6" cy="260.0" r="3.4" fill="#B4442F"/><circle cx="358.4" cy="159.9" r="3.4" fill="#B4442F"/><circle cx="461.6" cy="124.6" r="3.4" fill="#B4442F"/><circle cx="530.2" cy="105.0" r="3.4" fill="#B4442F"/><circle cx="596.4" cy="89.3" r="3.4" fill="#B4442F"/><path d="M176.5,260.0 L275.5,195.2 L329.1,169.7 L358.4,132.4 L433.8,130.5 L491.9,116.7 L596.4,46.1" fill="none" stroke="#2E7D8C" stroke-width="2.4"/><circle cx="176.5" cy="260.0" r="3.4" fill="#2E7D8C"/><circle cx="275.5" cy="195.2" r="3.4" fill="#2E7D8C"/><circle cx="329.1" cy="169.7" r="3.4" fill="#2E7D8C"/><circle cx="358.4" cy="132.4" r="3.4" fill="#2E7D8C"/><circle cx="433.8" cy="130.5" r="3.4" fill="#2E7D8C"/><circle cx="491.9" cy="116.7" r="3.4" fill="#2E7D8C"/><circle cx="596.4" cy="46.1" r="3.4" fill="#2E7D8C"/><path d="M208.2,260.0 L329.8,260.0 L413.1,260.0 L481.4,207.0 L554.4,177.6" fill="none" stroke="#7A6A9B" stroke-width="2.4"/><circle cx="208.2" cy="260.0" r="3.4" fill="#7A6A9B"/><circle cx="329.8" cy="260.0" r="3.4" fill="#7A6A9B"/><circle cx="413.1" cy="260.0" r="3.4" fill="#7A6A9B"/><circle cx="481.4" cy="207.0" r="3.4" fill="#7A6A9B"/><circle cx="554.4" cy="177.6" r="3.4" fill="#7A6A9B"/></svg>
@@ -366,7 +449,7 @@ are not enough to say which is typical.</p>
   <span class="lgi"><i style="background:#2E7D8C"></i>IEEE-33 holdout</span>
   <span class="lgi"><i style="background:#7A6A9B"></i>IEEE-69</span>
 </div>
-<figcaption><b>Figure 1.</b> Violating minutes against &rho;, band 0.005, all three closed-loop sets.
+<figcaption><b>Figure 2.</b> Violating minutes against &rho;, band 0.005, all three closed-loop sets.
 The monotone rise and the violation-free low-&rho; regime replicate on both feeders; IEEE-69's
 threshold sits higher (&rho;&nbsp;&asymp;&nbsp;0.7 rather than 0.4) and its violation counts are
 lower, consistent with its larger certified slack.</figcaption>
@@ -380,7 +463,7 @@ lower, consistent with its larger certified slack.</figcaption>
   <span class="lgi"><i style="background:#7A6A9B"></i>IEEE-69</span>
   <span class="lgi" style="opacity:.75">dashed &mdash; D<sub>err</sub> median</span>
 </div>
-<figcaption><b>Figure 2.</b> The decomposition, and where it fails to replicate. Solid curves are
+<figcaption><b>Figure 3.</b> The decomposition, and where it fails to replicate. Solid curves are
 D<sub>agg</sub> p95, dashed are D<sub>err</sub> median. Both IEEE-33 sets show D<sub>agg</sub>
 rising with &rho; and D<sub>err</sub> flat; IEEE-69 shows D<sub>agg</sub> flat-to-falling and
 D<sub>err</sub> flat-to-rising, at roughly twice the IEEE-33 level. The &rho;-dependence of
@@ -394,7 +477,7 @@ violations survives on both feeders; its attribution to D<sub>agg</sub> does not
   <span class="lgi"><i style="background:#2E7D8C"></i>caught by &#923;<sub>total</sub></span>
   <span class="lgi"><i style="background:#B4442F"></i>caught by &#923; alone</span>
 </div>
-<figcaption><b>Figure 3.</b> IEEE-33 fitting set: what each index catches. The black curve is the
+<figcaption><b>Figure 4.</b> IEEE-33 fitting set: what each index catches. The black curve is the
 finding this work had to explain; the teal curve is &Lambda;<sub>total</sub> at threshold 1 tracking
 it; the red dashed curve is the static &Lambda;, flat near zero because it cannot see
 intra-interval drift.</figcaption>
@@ -408,7 +491,7 @@ intra-interval drift.</figcaption>
   <span class="lgi"><i style="background:#7A6A9B"></i>joint, violated</span>
   <span class="lgi"><i style="background:#2E7D8C"></i>joint, secure</span>
 </div>
-<figcaption><b>Figure 4.</b> The static failure boundary on the (&rho;, margin) plane, including the
+<figcaption><b>Figure 5.</b> The static failure boundary on the (&rho;, margin) plane, including the
 IEEE-69 points. Each line is the band a planner must hold at a static operating point &mdash; the
 realised D<sub>err</sub>. Joint allocation needs 0.0055&ndash;0.0062&nbsp;p.u., nearly flat in &rho;;
 naive allocation needs 0.019&ndash;0.031 and rising. <b>Static bands only</b> &mdash; the closed loop
@@ -417,7 +500,7 @@ adds up to a further 0.014&nbsp;p.u. on IEEE-33.</figcaption>
 
 <figure>
 <svg viewBox="0 0 650 306" class="ch" role="img"><line class="grid" x1="64" y1="266.0" x2="624" y2="266.0"/><text class="tk" x="56" y="269.5" text-anchor="end">0.000</text><line class="grid" x1="64" y1="216.0" x2="624" y2="216.0"/><text class="tk" x="56" y="219.5" text-anchor="end">0.005</text><line class="grid" x1="64" y1="166.0" x2="624" y2="166.0"/><text class="tk" x="56" y="169.5" text-anchor="end">0.010</text><line class="grid" x1="64" y1="116.0" x2="624" y2="116.0"/><text class="tk" x="56" y="119.5" text-anchor="end">0.015</text><line class="grid" x1="64" y1="66.0" x2="624" y2="66.0"/><text class="tk" x="56" y="69.5" text-anchor="end">0.020</text><line class="grid" x1="64" y1="16.0" x2="624" y2="16.0"/><text class="tk" x="56" y="19.5" text-anchor="end">0.025</text><text class="tk" x="64.0" y="284" text-anchor="middle">0</text><text class="tk" x="176.0" y="284" text-anchor="middle">0.2</text><text class="tk" x="288.0" y="284" text-anchor="middle">0.4</text><text class="tk" x="400.0" y="284" text-anchor="middle">0.6</text><text class="tk" x="512.0" y="284" text-anchor="middle">0.8</text><text class="tk" x="624.0" y="284" text-anchor="middle">1</text><path d="M148.0,158.2 L204.0,136.4 L260.0,113.8 L372.0,39.6 L484.0,36.2 L596.0,34.9" fill="none" stroke="#B4442F" stroke-width="2"/><circle cx="148.0" cy="158.2" r="3" fill="#B4442F"/><circle cx="204.0" cy="136.4" r="3" fill="#B4442F"/><circle cx="260.0" cy="113.8" r="3" fill="#B4442F"/><circle cx="372.0" cy="39.6" r="3" fill="#B4442F"/><circle cx="484.0" cy="36.2" r="3" fill="#B4442F"/><circle cx="596.0" cy="34.9" r="3" fill="#B4442F"/><path d="M148.0,225.0 L204.0,198.6 L260.0,166.3 L372.0,152.2 L484.0,150.0 L596.0,149.1" fill="none" stroke="#C08A1E" stroke-width="2"/><circle cx="148.0" cy="225.0" r="3" fill="#C08A1E"/><circle cx="204.0" cy="198.6" r="3" fill="#C08A1E"/><circle cx="260.0" cy="166.3" r="3" fill="#C08A1E"/><circle cx="372.0" cy="152.2" r="3" fill="#C08A1E"/><circle cx="484.0" cy="150.0" r="3" fill="#C08A1E"/><circle cx="596.0" cy="149.1" r="3" fill="#C08A1E"/><path d="M204.0,263.5 L260.0,264.3 L372.0,262.0 L484.0,261.2 L596.0,261.2" fill="none" stroke="#8A6D3B" stroke-width="2"/><circle cx="204.0" cy="263.5" r="3" fill="#8A6D3B"/><circle cx="260.0" cy="264.3" r="3" fill="#8A6D3B"/><circle cx="372.0" cy="262.0" r="3" fill="#8A6D3B"/><circle cx="484.0" cy="261.2" r="3" fill="#8A6D3B"/><circle cx="596.0" cy="261.2" r="3" fill="#8A6D3B"/><path d="M148.0,233.5 L204.0,232.7 L260.0,232.0 L372.0,230.7 L484.0,229.6 L596.0,229.3" fill="none" stroke="#7A6A9B" stroke-width="2"/><circle cx="148.0" cy="233.5" r="3" fill="#7A6A9B"/><circle cx="204.0" cy="232.7" r="3" fill="#7A6A9B"/><circle cx="260.0" cy="232.0" r="3" fill="#7A6A9B"/><circle cx="372.0" cy="230.7" r="3" fill="#7A6A9B"/><circle cx="484.0" cy="229.6" r="3" fill="#7A6A9B"/><circle cx="596.0" cy="229.3" r="3" fill="#7A6A9B"/><line x1="64" y1="266" x2="624" y2="266" stroke="#2E7D8C" stroke-width="2.4" stroke-dasharray="4 3"/><line x1="64" y1="266" x2="624" y2="266" stroke="#2F6B45" stroke-width="2.4" stroke-dasharray="4 3"/><text class="ax" x="64" y="306">electrical coupling rho = R_shared / R_own</text><text class="ax" transform="translate(15,141.0) rotate(-90)" text-anchor="middle">median AC violation depth [p.u.]</text></svg><div class="lg"><span class="lgi"><i style="background:#B4442F"></i>naive, no band</span><span class="lgi"><i style="background:#C08A1E"></i>naive, 0.005 band</span><span class="lgi"><i style="background:#8A6D3B"></i>naive, 0.010 band</span><span class="lgi"><i style="background:#7A6A9B"></i>joint, no band</span><span class="lgi"><i style="background:#2E7D8C"></i>joint, 0.005 band</span><span class="lgi"><i style="background:#2F6B45"></i>joint, 0.010 band</span></div>
-<figcaption><b>Figure 5.</b> Static violation depth against &rho; on the derivation set, isolating
+<figcaption><b>Figure 6.</b> Static violation depth against &rho; on the derivation set, isolating
 the D<sub>err</sub> term: naive depth grows with &rho; (0.0108&nbsp;&rarr;&nbsp;0.0231 with no band)
 while joint depth is flat (0.0033&nbsp;&rarr;&nbsp;0.0037).</figcaption>
 </figure>
@@ -427,16 +510,37 @@ while joint depth is flat (0.0033&nbsp;&rarr;&nbsp;0.0037).</figcaption>
 <div class="snum">04</div>
 <h2>What the criterion gets wrong</h2>
 
-<h3>Summary: one gap closed, one closed partially</h3>
+<h3>Summary: both gaps closed, and one earlier claim corrected</h3>
 <p>The circularity objection is answered. The 0.85 threshold, applied unchanged to 28 runs it was
-never fitted on, holds precision at 1.000 and false-positive rate at 0.00000 in every one of them,
-and recall at 0.852&ndash;0.856 on the IEEE-33 holdout and 1.000 on IEEE-69, against 0.941&ndash;0.955
-on the fitting set. Recall degraded; precision did not. The single-topology objection is answered
-for the headline result &mdash; violations rise with &rho; on both feeders, with a violation-free
-low-coupling regime on both &mdash; but <em>not</em> for the mechanism attribution. On IEEE-69 the
-rise in &Lambda;<sub>total</sub> comes from shrinking certified slack rather than growing
-D<sub>agg</sub>. That is a new finding from this pass, it narrows a claim rather than confirming it,
-and it is reported as such.</p>
+never fitted on, holds precision at 1.000 and false-positive rate at 0.00000 in every one, with
+recall 0.852&ndash;0.856 on the IEEE-33 holdout and 1.000 on IEEE-69, against 0.941&ndash;0.955 on
+the fitting set. Recall degraded; precision did not.</p>
+<p>The single-topology objection is answered, and in the course of answering it a claim from the
+previous version turned out to be wrong. That version reported that the mechanism attribution
+&mdash; D<sub>agg</sub> growing with &rho; &mdash; failed to replicate on IEEE-69. It does
+replicate. The failure was in the statistic: p95 of the <em>aggregate</em> D<sub>agg</sub> mixes the
+hub's own rising term with a topology-dependent background and cancels signs. Decomposed into
+w<sub>C</sub>&#183;&gamma;<sub>C</sub>, the term follows
+2R<sub>mm</sub>&gamma;<sub>C</sub>&#961;/S<sub>b</sub> to three significant figures on four
+topologies and 22 placements, with no fitted quantity. A manipulation experiment on two synthetic
+feeders differing in one structural property confirms the causal split: the resistance profile
+controls the slack level and therefore whether violations occur, and does not touch the drift
+term's slope, which is identical in both arms.</p>
+<p>What remains genuinely open is narrower than before and is named precisely below: the sign of
+d(slack)/d&rho;.</p>
+
+<h3>Still open: why slack is flat on IEEE-69</h3>
+<p>Certified slack falls with &rho; on IEEE-33 (&minus;0.0080 fit, &minus;0.0120 holdout) and in both
+synthetic arms (&minus;0.0056, &minus;0.0041), but is flat on IEEE-69 (+0.0007). The manipulation
+test rules out the resistance profile as the driver &mdash; slack fell with &rho; in <em>both</em>
+arms, so flipping that property does not flip the sign. Ruled out, therefore: resistance profile
+shape, and (since &gamma;<sub>C</sub> is invariant everywhere) any fleet-drift explanation. Not yet
+tested: the &alpha;-fair allocation's response to a feeder whose binding bus has a much longer
+upstream path, and the interaction between hub&nbsp;C's placement and the other three hubs' load
+composition, which differs between the two published systems. This is one sign of one derivative on
+one feeder, it does not affect &Lambda;<sub>total</sub> (which uses the measured slack directly,
+whatever its trend), and it is recorded as an open question rather than resolved in either
+direction.</p>
 
 <h3>The threshold is bounded, not universal</h3>
 <p>0.85 is validated for &rho;&nbsp;&#8712;&nbsp;[0.00,&nbsp;0.93], planning bands 0.005 and 0.010
@@ -476,7 +580,10 @@ data.</b> Every closed-loop run uses synthetic load, PV and tariff profiles appl
 systems; nothing here has been checked against metered distribution data, and real feeders carry
 load volatility, unbalance and tap-changer action that this model does not represent &mdash;
 D<sub>agg</sub> in particular is driven by intra-interval drift, which is exactly the quantity real
-data would most likely change. <b>(b) One fleet model.</b> A single bus type, one route structure,
+data would most likely change. <b>(b) One fleet model, and one charger rating.</b> &gamma;<sub>C</sub> came out invariant at
+90&nbsp;kW across every run, but that number is 0.6&nbsp;&times; hub&nbsp;C's single 150&nbsp;kW bay
+&mdash; it is a charger property, and no run varied the bay rating or count at hub&nbsp;C, so the
+closed form's slope has been verified against topology but not against &gamma;. A single bus type, one route structure,
 one timetable generator, and one charging technology; fleet size was varied (16 and 20 vehicles) and
 that is the only fleet dimension tested. Depot mix, mixed vehicle classes, and different dwell
 distributions are untested. <b>(c) The threshold's generality is exactly what the holdout tested.</b>
@@ -501,9 +608,15 @@ agg_sweep.py        7 placements x 2 bands   -> agg_b&lt;bus&gt;_&lt;band&gt;.np
 agg_eval.py         scores LAMBDA and LAMBDA_total per minute -> agg_rows.json
 agg_sweep2.py       holdout placements, a larger fleet, and the IEEE-69 sweep
 mkfig3.py           decomposition and closed-loop panels
+mech.py             decomposes D_agg into drift gamma and weight w_C, and
+                    records each placement's structural descriptors
+syn_sweep.py        the manipulation experiment: one structural knob, rho
+                    swept inside each arm, everything else matched
 mkfig4.py           three-set side-by-side panels
-system.py           FEEDER=ieee69 swaps the whole simulated feeder for the
-                    69-bus system; everything downstream is topology-agnostic</code></pre>
+mkfig5.py           the collapse figure (D_agg^C vs rho, closed form overlaid)
+system.py           FEEDER=ieee69 swaps in the 69-bus system; FEEDER=synth
+                    with SYN_PROFILE=front|flat|back builds the parametric
+                    feeder for the manipulation test</code></pre>
 <p><code>case69.m</code> is the MATPOWER file itself, fetched and committed, not transcribed.</p>
 </section>
 
@@ -533,8 +646,8 @@ this work listed three of those parameters; the drift pair is the addition, and 
 does most of the work at high coupling.</p>
 </section>
 
-<footer>4760 static allocations across 62 topologies; 60&#8239;480 closed-loop minutes across 42
-full-day runs on two published feeders. All violations read off a backward/forward sweep AC solver at every simulated minute;
+<footer>4760 static allocations across 62 topologies; 69&#8239;120 closed-loop minutes across 48
+full-day runs on two published feeders and two purpose-built synthetic ones. All violations read off a backward/forward sweep AC solver at every simulated minute;
 no reported violation comes from the model an allocation was optimised against. IEEE-69 data:
 MATPOWER <code>data/case69.m</code> (Baran &amp; Wu, IEEE Trans. Power Delivery 4(1), 1989).</footer>
 </div>
