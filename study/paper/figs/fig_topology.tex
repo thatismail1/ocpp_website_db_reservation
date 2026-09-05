@@ -1,0 +1,51 @@
+% One-line diagram: coupling between two charging hubs on a radial feeder.
+\begin{tikzpicture}[
+  >={Stealth[length=2mm]},
+  bus/.style={circle,draw,fill=white,inner sep=0pt,minimum size=3.2pt},
+  lbl/.style={font=\scriptsize},
+  hub/.style={rectangle,draw,thick,fill=white,inner sep=1.5pt,font=\scriptsize\bfseries},
+  x=8.2mm,y=7.5mm]
+
+% shared segment shading
+\fill[c2!14,rounded corners=1pt] (0.75,-0.30) rectangle (4.25,0.30);
+\node[lbl,c2] at (2.5,0.62) {shared path $R_{AC}$};
+
+% trunk
+\draw[thick] (0,0) -- (7.6,0);
+\foreach \x in {1,2,3,4,5,6,7} \node[bus] at (\x,0) {};
+
+% substation
+\draw[thick] (-0.15,-0.42) rectangle (0.15,0.42);
+\draw[thick] (-0.45,0) -- (0,0);
+\node[lbl,align=center] at (0,-0.85) {substation\\$V_{\mathrm{ref}}$};
+
+% hub A at the lateral tip
+\node[hub,fill=c1!12,draw=c1] (A) at (7.6,0.85) {A};
+\draw[thick,c1] (7.6,0) -- (A);
+\node[lbl,c1] at (8.55,0.85) {terminal};
+
+% movable hub C
+\node[hub,fill=c2!15,draw=c2] (C) at (4,-0.95) {C};
+\draw[thick,c2] (4,0) -- (C);
+\draw[->,c2,thick] (3.2,-1.5) -- (5.4,-1.5);
+\draw[->,c2,thick] (3.2,-1.5) -- (1.6,-1.5);
+\node[lbl,c2,align=center] at (4,-1.9) {hub C relocated along the lateral:\\
+  $\rho=R_{AC}/R_{AA}$ swept, base case unchanged};
+
+% other hubs on separate laterals
+\node[hub] (B) at (2,1.0) {B};
+\draw[thick] (2,0) -- (B);
+\node[hub] (D) at (5,1.0) {D};
+\draw[thick] (5,0) -- (D);
+\node[lbl] at (5.95,1.0) {depot $+$ BESS};
+
+% exclusive segment brace
+\draw[decorate,decoration={brace,amplitude=3pt,mirror},c1]
+  (4.35,0.34) -- (7.55,0.34);
+\node[lbl,c1] at (5.95,0.72) {exclusive $R_{AA}-R_{AC}$};
+
+% buses feeding load
+\foreach \x in {1,2,3,4,5,6,7}
+  \draw[->,gray] (\x,0) -- ++(0,-0.42);
+\node[lbl,gray] at (7.9,-0.45) {base load};
+\end{tikzpicture}

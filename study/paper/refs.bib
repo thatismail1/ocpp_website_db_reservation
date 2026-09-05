@@ -1,34 +1,47 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%  Bibliography
+% ============================================================================
+%  References for "An Analytical Failure Criterion for Per-Site Dynamic
+%  Operating Envelopes under Mobile Shared Flexible Loads"
 %
-%  POLICY FOR THIS FILE: only entries whose bibliographic data could be
-%  verified from a primary source are given in full below. Entries that the
-%  manuscript needs but whose metadata could NOT be verified are listed at the
-%  bottom as TODO stubs with a note on what to look up. Fill them in from the
-%  publisher record before submitting. Do not submit with a stub in place --
-%  an approximated citation is worse than a missing one.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  VERIFICATION NOTE. Direct DOI/Crossref/OpenAlex/arXiv access is blocked
+%  from the environment in which this file was assembled, so every entry
+%  below was verified against indexed publisher/repository records located by
+%  web search (ADS bibcodes, IEEE Xplore records, publisher landing pages).
+%  Authors should still spot-check issue numbers and months against Xplore
+%  before submission. Claims in Section II that could not be matched to a
+%  verified source carry a %TODO comment in main.tex and are deliberately
+%  left uncited rather than supported by an approximated reference.
+% ============================================================================
 
-% --- VERIFIED --------------------------------------------------------------
-% Source: header of MATPOWER data/case69.m, which cites this paper as the
-% origin of the 69-bus system used here, with DOI 10.1109/61.19265.
+% ---- Distribution network models -------------------------------------------
+@article{baran1989reconfig,
+  author  = {Baran, M. E. and Wu, F. F.},
+  title   = {Network reconfiguration in distribution systems for loss
+             reduction and load balancing},
+  journal = {IEEE Trans. Power Del.},
+  volume  = {4},
+  number  = {2},
+  pages   = {1401--1407},
+  month   = apr,
+  year    = {1989}
+}
+
 @article{baran1989capacitor,
   author  = {Baran, M. E. and Wu, F. F.},
   title   = {Optimal capacitor placement on radial distribution systems},
-  journal = {IEEE Transactions on Power Delivery},
+  journal = {IEEE Trans. Power Del.},
   volume  = {4},
   number  = {1},
   pages   = {725--734},
+  month   = jan,
   year    = {1989},
   doi     = {10.1109/61.19265}
 }
 
-% Source: same MATPOWER header, listed as a further source for the 69-bus data.
 @article{das2008capacitors,
   author  = {Das, D.},
   title   = {Optimal placement of capacitors in radial distribution system
-             using a {Fuzzy-GA} method},
-  journal = {International Journal of Electrical Power \& Energy Systems},
+             using a fuzzy-{GA} method},
+  journal = {Int. J. Electr. Power Energy Syst.},
   volume  = {30},
   number  = {6--7},
   pages   = {361--367},
@@ -36,35 +49,121 @@
   doi     = {10.1016/j.ijepes.2007.08.004}
 }
 
-% --- TODO: VERIFY BEFORE SUBMISSION ----------------------------------------
-% The manuscript's Related Work refers to these bodies of work in general
-% terms and does not cite them by key, precisely so that nothing unverified
-% enters the citation list. If you cite them, complete these entries first.
-%
-% 1. MATPOWER. Cite the software paper (Zimmerman, Murillo-Sanchez, Thomas,
-%    IEEE Trans. Power Systems, 2011) AND the specific version/DOI of the data
-%    file you used. Look up: exact volume/issue/pages and the Zenodo DOI for
-%    the release whose data/case69.m you parsed.
-%
-% 2. The LinDistFlow branch-flow model. Cite Baran & Wu's companion 1989 papers
-%    on network reconfiguration / load balancing, or Farivar & Low's branch-flow
-%    relaxation papers, depending on which formulation you present as the base.
-%    Look up: exact titles, volumes, pages.
-%
-% 3. Dynamic operating envelopes: the definitional reference for
-%    connection-specific per-interval limits, plus at least one alpha-fair
-%    allocation paper (the benchmark of Section V) and one field-trial report
-%    on refresh cadence. Look up: authors, venue, year, DOI for each.
-%
-% 4. Electric bus opportunity-charging coordination: two or three recent
-%    references establishing that the network is usually modelled either as a
-%    single aggregate limit or via full nonlinear OPF -- the gap this paper
-%    addresses. Look up: full records.
-%
-% 5. IEEE 33-bus system. If you cite a source for the 33-bus branch table
-%    separately from the 69-bus one, verify which Baran & Wu 1989 paper it
-%    comes from; the two are different papers in the same year.
+@article{farivar2013branchI,
+  author  = {Farivar, M. and Low, S. H.},
+  title   = {Branch flow model: Relaxations and convexification---{Part I}},
+  journal = {IEEE Trans. Power Syst.},
+  volume  = {28},
+  number  = {3},
+  pages   = {2554--2564},
+  month   = aug,
+  year    = {2013}
+}
 
-@misc{TODO,
-  note = {PLACEHOLDER -- remove this entry and complete items 1--5 above.}
+@article{farivar2013branchII,
+  author  = {Farivar, M. and Low, S. H.},
+  title   = {Branch flow model: Relaxations and convexification---{Part II}},
+  journal = {IEEE Trans. Power Syst.},
+  volume  = {28},
+  number  = {3},
+  pages   = {2565--2572},
+  month   = aug,
+  year    = {2013}
+}
+
+@article{zimmerman2011matpower,
+  author  = {Zimmerman, R. D. and Murillo-S{\'a}nchez, C. E. and Thomas, R. J.},
+  title   = {{MATPOWER}: Steady-state operations, planning, and analysis tools
+             for power systems research and education},
+  journal = {IEEE Trans. Power Syst.},
+  volume  = {26},
+  number  = {1},
+  pages   = {12--19},
+  month   = feb,
+  year    = {2011},
+  doi     = {10.1109/TPWRS.2010.2051168}
+}
+
+% ---- Dynamic operating envelopes -------------------------------------------
+@article{petrou2021dol,
+  author  = {Petrou, K. and Procopiou, A. T. and Gutierrez-Lagos, L. and
+             Liu, M. Z. and Ochoa, L. F. and Langstaff, T. and
+             Theunissen, J. M.},
+  title   = {Ensuring distribution network integrity using dynamic operating
+             limits for prosumers},
+  journal = {IEEE Trans. Smart Grid},
+  volume  = {12},
+  number  = {5},
+  pages   = {3877--3888},
+  month   = sep,
+  year    = {2021}
+}
+
+@article{liu2024robustdoe,
+  author  = {Liu, B. and Braslavsky, J. H.},
+  title   = {Robust dynamic operating envelopes for {DER} integration in
+             unbalanced distribution networks},
+  journal = {IEEE Trans. Power Syst.},
+  volume  = {39},
+  number  = {2},
+  pages   = {3921--3936},
+  year    = {2024}
+}
+
+@article{gerdroodbari2022pq,
+  author  = {Zabihinia Gerdroodbari, Y. and Khorasany, M. and Razzaghi, R.},
+  title   = {Dynamic {PQ} operating envelopes for prosumers in distribution
+             networks},
+  journal = {Appl. Energy},
+  volume  = {325},
+  pages   = {119757},
+  year    = {2022}
+}
+
+@article{alam2024allocation,
+  author  = {Alam, M. R. and Nguyen, P. T. H. and Naranpanawe, L. and
+             Saha, T. K. and Lankeshwara, G.},
+  title   = {Allocation of dynamic operating envelopes in distribution
+             networks: Technical and equitable perspectives},
+  journal = {IEEE Trans. Sustain. Energy},
+  volume  = {15},
+  pages   = {173--186},
+  year    = {2024},
+  doi     = {10.1109/TSTE.2023.3275082}
+}
+
+@misc{aemo_edge,
+  author       = {{Australian Energy Market Operator}},
+  title        = {Project {EDGE}: Dynamic operating envelopes reports},
+  howpublished = {[Online]},
+  note         = {Available: https://www.aemo.com.au/initiatives/major-programs/
+                  nem-distributed-energy-resources-der-program/der-demonstrations/
+                  project-edge/project-edge-reports}
+}
+
+% ---- Fairness --------------------------------------------------------------
+@article{mo2000fair,
+  author  = {Mo, J. and Walrand, J.},
+  title   = {Fair end-to-end window-based congestion control},
+  journal = {IEEE/ACM Trans. Netw.},
+  volume  = {8},
+  number  = {5},
+  pages   = {556--567},
+  month   = oct,
+  year    = {2000},
+  doi     = {10.1109/90.879343}
+}
+
+% ---- Electric bus fleet charging -------------------------------------------
+@article{abdelwahed2020opportunity,
+  author  = {Abdelwahed, A. and van den Berg, P. L. and Brandt, T. and
+             Collins, J. and Ketter, W.},
+  title   = {Evaluating and optimizing opportunity fast-charging schedules in
+             transit battery electric bus networks},
+  journal = {Transp. Sci.},
+  volume  = {54},
+  number  = {6},
+  pages   = {1601--1615},
+  year    = {2020},
+  doi     = {10.1287/trsc.2020.0982}
 }

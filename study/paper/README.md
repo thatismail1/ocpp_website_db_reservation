@@ -1,40 +1,36 @@
-# Overleaf instructions
+# Overleaf: how to compile
 
-1. Create a new Overleaf project and upload the whole `paper/` folder
-   (`main.tex`, `refs.bib`, `figs/`). Or: **New Project -> Upload Project**
-   with a zip of this folder.
-2. Set **Compiler: pdfLaTeX** and **Main document: main.tex**
-   (Menu -> Settings).
-3. Compile. No image files are needed -- every figure is native `pgfplots`
-   generated from the result JSONs by `../mkpgf.py`, so the plots are
-   editable LaTeX rather than bitmaps.
+1. **New Project → Upload Project** with `paper_overleaf.zip` (or upload this
+   folder's contents).
+2. Menu → **Compiler: pdfLaTeX**, **Main document: main.tex**.
+3. Compile twice (BibTeX run in between happens automatically on Overleaf).
 
-## Layout switch
+Files:
 
-`main.tex` opens in double-spaced single-column review layout:
+    main.tex        the manuscript (IEEEtran, lettersize/journal)
+    refs.bib        13 verified references; see the header note in that file
+    IEEEtran.cls    the class file from the supplied template
+    fig1.png        placeholder author photo used by \IEEEbiography
+    figs/*.tex      seven native TikZ/pgfplots figures, no bitmaps
 
-    \documentclass[journal,onecolumn,12pt,draftclsnofoot]{IEEEtran}
+## Before submitting
 
-For the final two-column submission layout, comment that line and uncomment
+* Fill in the author block, the `\thanks` footnotes, `\markboth`, and the
+  Acknowledgment.
+* Replace `fig1.png` with a real author photo, or switch the first
+  `\IEEEbiography` to `\IEEEbiographynophoto`.
+* `main.tex` contains one `%TODO: verify citation` comment in Section II. Cite
+  two or three electric-bus charging-coordination papers there once their
+  records are verified, or leave the claim uncited.
+* Spot-check `refs.bib` issue numbers and months on IEEE Xplore.
 
-    \documentclass[journal]{IEEEtran}
+## Regenerating the data figures
 
-## Before you submit
-
-`refs.bib` contains two verified entries and a block of TODO items. The
-manuscript's Related Work deliberately refers to those bodies of work without
-citation keys so that no unverified reference enters the bibliography. Complete
-items 1--5 in `refs.bib` from publisher records, then add the citations into
-Section II.
-
-Also fill in the author block and the funding/acknowledgement footnote in
-`main.tex`.
-
-## Regenerating the figures
-
-From the `study/` directory:
+From the parent `study/` directory:
 
     python3 mkpgf.py
 
-which rewrites `paper/figs/*.tex` from `mech_rows.json`, `crit_rows.json`,
-`crit_fig2.json`, `agg_rows.json`, `hold_rows.json` and `i69_rows.json`.
+rewrites `figs/fig_boundary.tex`, `fig_closedloop.tex`, `fig_collapse.tex` and
+`fig_split.tex` from the result JSONs. The three schematic figures
+(`fig_topology.tex`, `fig_timing.tex`, `fig_arch.tex`) are hand-drawn TikZ and
+are not regenerated.

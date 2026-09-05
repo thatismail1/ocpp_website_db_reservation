@@ -1,0 +1,28 @@
+% Control architecture and the evaluation discipline.
+\begin{tikzpicture}[
+  >={Stealth[length=2.2mm]},
+  box/.style={rectangle,draw,thick,rounded corners=1.5pt,align=center,
+              font=\scriptsize,minimum height=8.5mm,inner xsep=3pt},
+  node distance=4mm,font=\scriptsize]
+
+\node[box,fill=c1!10,draw=c1,text width=26mm] (doe)
+  {\textbf{Operator}\\ DOE allocation \eqref{eq:doe}\\ on LinDistFlow, $\Delta=15$\,min};
+\node[box,fill=c2!10,draw=c2,text width=26mm,right=7mm of doe] (mpc)
+  {\textbf{Hub MPC}\\ 1-min schedule inside\\ the envelope, re-solved\\ every 5\,min};
+\node[box,fill=black!5,text width=26mm,right=7mm of mpc] (plant)
+  {\textbf{Plant}\\ realised injections\\ $p(t)$, 1-min};
+\node[box,fill=c5!10,draw=c5,text width=34mm,below=8mm of mpc] (ac)
+  {\textbf{Referee: AC power flow}\\ backward/forward sweep at\\ \emph{every} simulated minute};
+\node[box,text width=34mm,below=6mm of ac] (crit)
+  {$\Lamt=(\Derr+\Dagg)/\text{slack}$ evaluated\\ at the bus the AC solution binds};
+
+\draw[->,thick] (doe) -- node[above,font=\scriptsize]{$\bar P_k$} (mpc);
+\draw[->,thick] (mpc) -- node[above,font=\scriptsize]{$p(t)$} (plant);
+\draw[->,thick] (plant.south) |- (ac.east);
+\draw[->,thick] (ac) -- (crit);
+\draw[->,dashed,thick] (mpc.north) -- ++(0,4mm) -| node[pos=0.25,above,font=\scriptsize]{SoC feedback} (doe.north);
+
+\node[align=left,font=\scriptsize,below=3mm of crit,text width=62mm]
+  {Nothing on the evaluation path re-uses the model on the allocation path:
+   violations are never read from LinDistFlow.};
+\end{tikzpicture}
