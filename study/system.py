@@ -36,6 +36,28 @@ LOAD = {
     32: (210, 100), 33: (60, 40),
 }
 N_BUS = 33
+
+# ---- optional second closed-loop topology ---------------------------------
+# FEEDER=ieee69 swaps the whole feeder for the IEEE 69-bus test system, parsed
+# from MATPOWER's data/case69.m (header cites M. E. Baran and F. F. Wu,
+# "Optimal capacitor placement on radial distribution systems", IEEE Trans.
+# Power Delivery 4(1):725-734, 1989). Everything downstream -- power flow,
+# envelopes, MPC, evaluation -- is topology-agnostic and picks this up.
+if os.environ.get("FEEDER", "ieee33") == "ieee69":
+    import re as _re
+    _t = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "case69.m")).read()
+
+    def _blk(name):
+        _m = _re.search(r"mpc\." + name + r"\s*=\s*\[(.*?)\n\s*\];", _t, _re.S)
+        return [[float(z) for z in _re.split(r"[\s,]+", ln)]
+                for ln in (l.split("%")[0].strip().rstrip(";").strip()
+                           for l in _m.group(1).splitlines()) if ln]
+
+    _bus, _br = _blk("bus"), _blk("branch")
+    BRANCH = [(int(b[0]), int(b[1]), b[2], b[3]) for b in _br]
+    LOAD = {int(b[0]): (b[2], b[3]) for b in _bus if b[2] or b[3]}
+    N_BUS = len(_bus)
 SUB_MVA = 5.0                       # substation transformer rating [MVA]
 V_REF = 1.04                        # substation OLTC set point [p.u.]
 LOAD_SCALE = float(os.environ.get("FEEDER_LOAD", 0.60))   # operating point
@@ -85,9 +107,24 @@ def path_resistance_matrix(parent, bidx, r):
 
 
 def branch_rating_pu():
-    """Apparent-power rating per branch in p.u. (trunk vs lateral)."""
+    """Apparent-power rating per branch in p.u.
+
+    Trunk branches carry the bulk of the feeder and get the full rating;
+    laterals are derated. On IEEE-33 the lateral set is the published one; on
+    any other topology a branch counts as a lateral when fewer than a fifth of
+    the buses sit downstream of it, which reproduces the IEEE-33 split.
+    """
     s = np.full(len(BRANCH), BRANCH_S_MAX_KVA / S_BASE_KVA)
-    laterals = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+    if N_BUS == 33:
+        laterals = {17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+    else:
+        parent, children, bidx, r, x, order = feeder_topology()
+        sub = np.ones(N_BUS)
+        for j in order[::-1]:
+            if parent[j] >= 0:
+                sub[parent[j]] += sub[j]
+        laterals = {int(bidx[j]) for j in range(1, N_BUS)
+                    if sub[j] < 0.2 * N_BUS}
     for k in laterals:
         s[k] = 2500.0 / S_BASE_KVA
     return s
@@ -124,6 +161,13 @@ HUBS = [
 if os.environ.get("HUB_C_BARE"):
     HUBS[2].base_load_kw = 0.0
     HUBS[2].pv_kwp = 0.0
+
+if N_BUS == 69:
+    # A on the weak lateral tip (bus 65, the published minimum-voltage bus),
+    # B at the end of the main feeder, D on a separate lateral; C is the
+    # movable en-route point, as in the IEEE-33 sweep.
+    for _h, _b in zip(HUBS, [65, 27, 56, 50]):
+        _h.bus = _b
 
 _hb = os.environ.get("HUB_BUSES")
 if _hb:

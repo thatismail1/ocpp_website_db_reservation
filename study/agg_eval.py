@@ -14,26 +14,24 @@ For each simulated minute t and the bus m that binds:
 and LAMBDA_total > 1 predicts u_ac < V_min^2. All violations are read off
 the backward/forward AC sweep, never off the linear model.
 """
-import glob, json, re
+import glob, json, re, sys
 import numpy as np
 import criterion as CR
 
 VMIN = 0.95
-COUPLING = {17: 0.934, 16: 0.817, 14: 0.696, 12: 0.515,
-            8: 0.276, 4: 0.086, 22: 0.008}
-
-
-def net_from_system():
-    return CR.ieee33()
-
+PAT = sys.argv[1] if len(sys.argv) > 1 else "agg_b*.npz"
+OUT = sys.argv[2] if len(sys.argv) > 2 else "agg_rows.json"
 
 rows = []
-for fn in sorted(glob.glob("agg_b*.npz")):
-    bus, band = re.match(r"agg_b(\d+)_([\d.]+)\.npz", fn).groups()
-    bus, band = int(bus), float(band)
-    z = np.load(fn)
+for fn in sorted(glob.glob(PAT)):
+    z = np.load(fn, allow_pickle=True)
+    bus, band = int(z["bus"]), float(z["band"])
+    feeder = str(z["feeder"]) if "feeder" in z.files else "ieee33"
+    n_veh = int(z["n_veh"]) if "n_veh" in z.files else 16
     P, Q, P15, Q15, Vm = z["P"], z["Q"], z["P15"], z["Q15"], z["Vm"]
-    net = net_from_system()
+    net = CR.ieee69() if feeder == "ieee69" else CR.ieee33()
+    hb = z["hubbus"] - 1
+    rho = float(net.R[hb[0], hb[2]] / net.R[hb[0], hb[0]])
     K = P.shape[1]
     uac = Vm ** 2
     # binding bus per minute, from the AC solution
@@ -45,7 +43,6 @@ for fn in sorted(glob.glob("agg_b*.npz")):
         dagg[t] = CR.agg_drop(net, P[:, t] - P15[:, t], Q[:, t] - Q15[:, t])[m]
         derr[t] = net.loss_drop(p_kw=P[:, t], q_kvar=Q[:, t])[m]
     # attribution: which buses' intra-interval deviation drives D_agg?
-    hb = z["hubbus"] - 1
     dP = P - P15
     dagg_hub = np.empty(K); dagg_exo = np.empty(K)
     for t in range(K):
@@ -59,7 +56,7 @@ for fn in sorted(glob.glob("agg_b*.npz")):
     viol = uac.min(0) < VMIN ** 2 - 1e-12
     recon = ulin15 - dagg - derr
     rows.append(dict(
-        bus=bus, band=band, rho=COUPLING[bus],
+        bus=bus, band=band, rho=rho, feeder=feeder, n_veh=n_veh,
         minutes=int(K), viol_min=int(viol.sum()),
         V_min=float(Vm.min()),
         depth=float(max(0.0, VMIN - Vm.min())),
@@ -79,14 +76,17 @@ for fn in sorted(glob.glob("agg_b*.npz")):
         fn_depth_med=float(np.median((VMIN - np.sqrt(np.maximum(uac.min(0), 1e-9)))[viol & (lam_t <= 1)])) if int((viol & (lam_t <= 1)).sum()) else 0.0,
         tp_depth_med=float(np.median((VMIN - np.sqrt(np.maximum(uac.min(0), 1e-9)))[viol & (lam_t > 1)])) if int((viol & (lam_t > 1)).sum()) else 0.0,
         lam_t_fn_med=float(np.median(lam_t[viol & (lam_t <= 1)])) if int((viol & (lam_t <= 1)).sum()) else 0.0,
+        # the practical operating threshold, applied as-is
+        tp_85=int((( lam_t > 0.85) &  viol).sum()), fp_85=int((( lam_t > 0.85) & ~viol).sum()),
+        fn_85=int(((lam_t <= 0.85) &  viol).sum()), tn_85=int(((lam_t <= 0.85) & ~viol).sum()),
         tp_t=int((( lam_t > 1) &  viol).sum()), fp_t=int((( lam_t > 1) & ~viol).sum()),
         fn_t=int(((lam_t <= 1) &  viol).sum()), tn_t=int(((lam_t <= 1) & ~viol).sum()),
     ))
     r = rows[-1]
-    print(f"bus {bus:2d} rho {r['rho']:.3f} band {band:.3f}  uv {r['viol_min']:4d} min  "
+    print(f"{feeder} bus {bus:2d} rho {r['rho']:.3f} band {band:.3f}  uv {r['viol_min']:4d} min  "
           f"Vmin {r['V_min']:.4f}  D_err {r['d_err_med']:.5f}  D_agg med {r['d_agg_med']:.5f} "
           f"p95 {r['d_agg_p95']:.5f}  recon MAE {r['recon_mae']:.2e}  "
           f"L: {r['tp_e']}/{r['fn_e']}  Lt: {r['tp_t']}/{r['fn_t']}", flush=True)
 
-json.dump(rows, open("agg_rows.json", "w"), indent=1)
-print("wrote agg_rows.json")
+json.dump(rows, open(OUT, "w"), indent=1)
+print("wrote", OUT)
