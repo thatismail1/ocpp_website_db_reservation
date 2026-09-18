@@ -89,13 +89,13 @@ security, LinDistFlow, flexibility allocation, hosting capacity.
 \end{IEEEkeywords}
 
 \section*{Nomenclature}
-\begin{tabular}{@{}ll@{}}
+{\footnotesize
+\begin{tabular}{@{}l@{\hspace{6pt}}p{0.66\columnwidth}@{}}
 $u_i$ & Squared voltage magnitude at bus $i$ [p.u.]\\
 $V_{\mathrm{ref}}$ & Substation voltage set point [p.u.]\\
 $V_{\min}$ & Statutory lower voltage limit [p.u.]\\
 $V_{\mathrm{plan}}$ & De-rated planning floor, $V_{\min}+\mathrm{band}$\\
-$R_{ij},X_{ij}$ & Resistance/reactance shared by the root-to-$i$\\
- & and root-to-$j$ paths [p.u.]\\
+$R_{ij},X_{ij}$ & Resistance/reactance shared by the root-to-$i$ and root-to-$j$ paths [p.u.]\\
 $R_{m\ell}$ & Resistance shared by bus $m$ and branch $\ell$\\
 $r_\ell$ & Resistance of branch $\ell$ [p.u.]\\
 $\rho$ & Shared-resistance fraction $R_{AC}/R_{AA}$\\
@@ -108,14 +108,13 @@ $C^{(m)},b^{(m)},c^{(m)}$ & Coefficients of the $N$-hub quadratic form\\
 $\Sb$ & Power base [kVA]\\
 $\Delta$ & Envelope interval length (15\,min)\\
 $\delta p_j$ & Intra-interval injection deviation at bus $j$\\
-$\gamma_j,\gamma_C$ & Intra-interval drift bound and its measured\\
- & value at hub C [kW]\\
+$\gamma_j,\gamma_C$ & Intra-interval drift bound and its measured value at hub~C [kW]\\
 $w_C$ & Voltage sensitivity to hub-C power\\
 $\Derr,\Dagg$ & Loss and aggregation error terms [p.u.\ of $u$]\\
 $\Lamt$ & Total failure index\\
 $\tau$ & Mobility constant (travel plus dwell time)\\
 $\alpha$ & Fairness exponent of the allocation objective\\
-\end{tabular}
+\end{tabular}}
 
 \section{Introduction}
 \IEEEPARstart{D}{ynamic} operating envelopes are becoming the standard
@@ -302,7 +301,7 @@ reported as a violation is computed by an AC power flow on the realised
 
 \section{Derivation}\label{sec:derivation}
 
-\subsection{Corner certification at \texorpdfstring{$N$}{N} hubs}\label{sec:corner}
+\subsection{Corner certification at $N$ hubs}\label{sec:corner}
 \begin{theorem}\label{thm:corner}
 Under Assumptions~\ref{as:radial}--\ref{as:q}, $\min_i u_i$ over the box
 $\prod_{h}[0,\bar P_h]$ is attained at the maximal corner $P=\bar P$, for any
@@ -319,7 +318,7 @@ Theorem~\ref{thm:corner} is what makes a single evaluation sufficient to
 certify an entire envelope box, and nothing in the argument is pairwise---the
 common restriction of coupling analyses to hub pairs is not required.
 
-\subsection{Exact \texorpdfstring{$N$}{N}-hub form of the omitted loss term}
+\subsection{Exact $N$-hub form of the omitted loss term}
 Exact DistFlow differs from \eqref{eq:lindist} in that branch flows carry the
 losses generated downstream, plus a smaller $(r^{2}+x^{2})\ell$ term
 \cite{baran1989capacitor}. Writing $\mathcal{P}(m)$ for the root-to-$m$ path
@@ -505,7 +504,7 @@ $0.014$~p.u.}
 \label{fig:boundary}
 \end{figure}
 
-\subsection{\texorpdfstring{$N$}{N}-hub check}
+\subsection{$N$-hub check}
 Forty configurations were tested: the four-hub IEEE 33-bus case study and
 $H=2,3,4,5$ on IEEE 69-bus, at three baseline margins and three bands. The
 quadratic form \eqref{eq:quad} agrees with an independent loss-propagation
@@ -650,18 +649,18 @@ Fig.~\ref{fig:collapse} compare it with measurement.
 \caption{Slope of the Hub Drift Term Against $\rho$ Versus the Closed Form
 \eqref{eq:closedform}. Band 0.005 p.u.}
 \label{tab:collapse}
-\centering\footnotesize
+\centering\footnotesize\setlength{\tabcolsep}{3.4pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Set & $R_{mm}$ & $\gamma_C$ & observed & $2R_{mm}\gamma_C/\Sb$ & ratio\\
+Set & $R_{mm}$ & $\gamma_C$ & obs. & $2R_{mm}\gamma_C/\Sb$ & ratio\\
 \midrule
 A: IEEE 33 & 0.0690 & 90.1 & 0.01243 & 0.01243 & 1.000\\
-B: IEEE 33, 16 veh. & 0.0690 & 90.0 & 0.01243 & 0.01242 & 1.000\\
+B: IEEE 33, 16 veh & 0.0690 & 90.0 & 0.01243 & 0.01242 & 1.000\\
 C: IEEE 69 & 0.0463 & 90.2 & 0.00838 & 0.00836 & 1.003\\
 D: synthetic, front & 0.0474 & 90.1 & 0.00854 & 0.00854 & 1.000\\
 E: synthetic, back & 0.0474 & 90.1 & 0.00854 & 0.00854 & 1.000\\
 \midrule
-B incl.\ 20-veh.\ runs & 0.0690 & 90.0 & 0.01002 & 0.01242 & 0.807\\
+B incl.\ 20-veh runs & 0.0690 & 90.0 & 0.01002 & 0.01242 & 0.807\\
 \bottomrule
 \end{tabular}\\[2pt]
 \raggedright\footnotesize $R_{mm}$ in p.u., $\gamma_C$ in kW, slopes in p.u.\

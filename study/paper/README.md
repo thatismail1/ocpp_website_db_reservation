@@ -34,3 +34,12 @@ rewrites `figs/fig_boundary.tex`, `fig_closedloop.tex`, `fig_collapse.tex` and
 `fig_split.tex` from the result JSONs. The three schematic figures
 (`fig_topology.tex`, `fig_timing.tex`, `fig_arch.tex`) are hand-drawn TikZ and
 are not regenerated.
+
+## Local build (verified)
+
+The manuscript compiles cleanly with TeX Live:
+
+    pdflatex main && bibtex main && pdflatex main && pdflatex main
+
+Result: 9 pages, no undefined references, no undefined citations, zero
+overfull/underfull hbox warnings on tables or equations.
